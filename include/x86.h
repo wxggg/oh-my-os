@@ -306,3 +306,5 @@ static inline void *__memcpy(void *dst, const void *src, size_t n)
     return dst;
 }
 #endif /* __HAVE_ARCH_MEMCPY */
+
+static inline void halt(void) { asm volatile("hlt"); }
