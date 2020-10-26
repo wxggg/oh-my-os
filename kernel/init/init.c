@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <string.h>
+#include <x86.h>
 
 int kern_init(void) __attribute__((noreturn));
 
@@ -12,5 +13,7 @@ int kern_init(void)
 
     puts("welcome to oh-my-os\n");
 
-    while (1) { }
+    while (1) {
+        halt();
+    }
 }
