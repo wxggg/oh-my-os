@@ -11,9 +11,10 @@ int kern_init(void)
 
     serial_init();
 
-    puts("welcome to oh-my-os\n");
+    printk("hello world!");
 
     while (1) {
         halt();
     }
 }
+
