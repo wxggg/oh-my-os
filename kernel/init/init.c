@@ -1,3 +1,4 @@
+#include <interrupt.h>
 #include <stdio.h>
 #include <string.h>
 #include <x86.h>
@@ -13,8 +14,9 @@ int kern_init(void)
 
     printk("hello world!");
 
+    pic_init();
+
     while (1) {
         halt();
     }
 }
-

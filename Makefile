@@ -80,6 +80,7 @@ $(call add_files_cc,$(call listf_cc,$(LIBDIR)),libs,)
 KINCLUDE	+= 	kernel/
 
 KSRCDIR		+= kernel/init \
+				arch/x86 \
 				drivers/console
 
 KCFLAGS		+= $(addprefix -I,$(KINCLUDE))
