@@ -16,6 +16,8 @@ int kern_init(void)
 
     pic_init();
 
+    timer_init();
+
     while (1) {
         halt();
     }

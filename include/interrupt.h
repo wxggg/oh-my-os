@@ -9,3 +9,7 @@
 void pic_init(void);
 
 void pic_enable(unsigned int irq);
+
+#define TICK_NUM    100
+
+void timer_init(void);
