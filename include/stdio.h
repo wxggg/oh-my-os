@@ -9,6 +9,6 @@ void putchar(int ch);
 int puts(const char *str);
 
 int print(int count, ...);
+int println(int count, ...);
 
-#define printk(x) print(1, x)
-
+#define printk(x) println(1, x)
