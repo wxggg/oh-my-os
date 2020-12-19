@@ -12,3 +12,6 @@ int print(int count, ...);
 int println(int count, ...);
 
 #define printk(x) println(1, x)
+
+const char * istr(int val);
+const char * xstr(unsigned int val);

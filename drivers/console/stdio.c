@@ -2,6 +2,20 @@
 #include <stdio.h>
 #include <string.h>
 
+#define FORMATBUF_NR 	16
+#define FORMATBUF_SIZE 	32
+
+static char formatbuf[FORMATBUF_NR][FORMATBUF_SIZE];
+
+static int formatbuf_i = 0;
+
+static char * get_format_buffer()
+{
+	char * buf = &formatbuf[formatbuf_i][0];
+	formatbuf_i = (formatbuf_i + 1) % FORMATBUF_SIZE;
+	return buf;
+}
+
 void putchar(int ch) { serial_putc(ch); }
 
 int puts(const char *str)
@@ -56,4 +70,28 @@ int println(int count, ...)
 
     puts("\n");
     return r + 1;
+}
+
+/**
+ * istr - format value to string
+ * - notice that the buffer for the string is
+ *   temprarily used.
+ */
+const char * istr(int val)
+{
+	char *buf = get_format_buffer();
+	to_str(val, buf, FORMATBUF_SIZE);
+	return buf;
+}
+
+/**
+ * xstr - format value to hex string
+ * - notice that the buffer for the string is
+ *   temprarily used.
+ */
+const char * xstr(unsigned int val)
+{
+	char *buf = get_format_buffer();
+	to_hex(val, buf, FORMATBUF_SIZE);
+	return buf;
 }
