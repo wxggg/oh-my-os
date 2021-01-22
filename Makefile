@@ -79,7 +79,7 @@ $(call add_files_cc,$(call listf_cc,$(LIBDIR)),libs,)
 
 KINCLUDE	+= 	kernel/
 
-KSRCDIR		+= kernel/init \
+KSRCDIR		+= 	kernel \
 				arch/x86 \
 				drivers/console
 
