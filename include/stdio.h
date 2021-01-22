@@ -6,4 +6,9 @@ void serial_init(void);
 void serial_putc(int ch);
 
 void putchar(int ch);
-void puts(const char *str);
+int puts(const char *str);
+
+int print(int count, ...);
+int println(int count, ...);
+
+#define printk(x) println(1, x)
