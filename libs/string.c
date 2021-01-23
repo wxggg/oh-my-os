@@ -1,6 +1,8 @@
 #include <string.h>
 #include <x86.h>
 
+static const char * __str_hex = "0123456789abcdef";
+
 /* *
  * strlen - calculate the length of the string @s, not including
  * the terminating '\0' character.
@@ -362,3 +364,65 @@ int memcmp(const void *v1, const void *v2, size_t n)
     }
     return 0;
 }
+
+void reverse_str(char *buf, int i, int j)
+{
+	for (char c; i < j; i++, j--){
+		c = buf[i];
+		buf[i] = buf[j];
+		buf[j] = c;
+	}
+}
+
+/*
+ * to_str - format integer to string
+ */
+void to_str(int val, char *buf, int len)
+{
+	int i = 0;
+	int flag = 0;
+
+	if (val == 0) {
+		buf[0] = '0';
+		buf[1] = '\0';
+		return;
+	}
+
+	if (val < 0) {
+		buf[i++] = '-';
+		val *= -1;
+		flag = -1;
+	}
+
+	while (val > 0) {
+		buf[i++] = '0' + val % 10;
+		val /= 10;
+	}
+
+	reverse_str(buf, flag < 0 ? 1 : 0, i - 1);
+
+	buf[i] = '\0';
+}
+
+/*
+ * to_hex - format integer to heximal
+ */
+void to_hex(unsigned int val, char *buf, int len)
+{
+	int i = 0;
+
+	if (val == 0) {
+		buf[0] = '0';
+		buf[1] = 0;
+	}
+
+	while (val > 0) {
+		buf[i++] = __str_hex[val % 16];
+		val /= 16;
+	}
+
+	reverse_str(buf, 0, i - 1);
+
+	buf[i] = 0;
+}
+

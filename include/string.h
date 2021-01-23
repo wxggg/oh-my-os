@@ -20,4 +20,6 @@ void *memmove(void *dst, const void *src, size_t n);
 void *memcpy(void *dst, const void *src, size_t n);
 int memcmp(const void *v1, const void *v2, size_t n);
 
-
+void reverse_str(char *buf, int i, int j);
+void to_str(int val, char *buf, int len);
+void to_hex(unsigned int val, char *buf, int len);
