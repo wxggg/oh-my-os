@@ -3,6 +3,7 @@
 #include <string.h>
 #include <x86.h>
 #include <graphic.h>
+#include <memory.h>
 
 int kern_init(void) __attribute__((noreturn));
 
@@ -20,6 +21,8 @@ int kern_init(void)
     timer_init();
 
 	graphic_init();
+
+	memory_init();
 
     while (1) {
         halt();

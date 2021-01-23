@@ -60,3 +60,6 @@
 
 #define vaddr(x) (x + KERNEL_VADDR_SHIFT)
 #define paddr(x) (x - KERNEL_VADDR_SHIFT)
+
+#define __pa(x) (x - KERNEL_VADDR_SHIFT)
+#define __kva(x) (x + KERNEL_VADDR_SHIFT)

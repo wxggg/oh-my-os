@@ -83,6 +83,7 @@ KSRCDIR		+= 	kernel \
 				arch/x86 \
 				drivers/console \
 				graphic \
+				mm \
 
 KCFLAGS		+= $(addprefix -I,$(KINCLUDE))
 
