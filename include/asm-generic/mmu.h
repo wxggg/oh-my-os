@@ -54,6 +54,7 @@
     .byte(((base) >> 16) & 0xff), (0x90 | (type)),                             \
         (0xC0 | (((lim) >> 28) & 0xf)), (((base) >> 24) & 0xff)
 
+#define PAGE_OFFSET 12
 #define PAGE_SIZE 4096
 #define KERNEL_STACK_SIZE ((PAGE_SIZE) * 2)
 #define KERNEL_VADDR_SHIFT 0xC0000000

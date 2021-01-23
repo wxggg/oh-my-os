@@ -23,14 +23,9 @@ struct e820 {
 	struct e820_map map[E820_MAX];
 };
 
-struct page {
-	uint32_t flags;
-};
-
 struct kernel_memory {
 	struct e820 *e820;
 	size_t index;
-	
 
 	/* [start end) */
 	pa_t start;
@@ -46,12 +41,6 @@ struct kernel_memory {
 };
 
 struct kernel_memory kmemory = {};
-
-static void manage_free_memory(pa_t start, pa_t end)
-{
-	println(4, "manage free memory: start:0x", xstr(start),
-			   "\tend:0x", xstr(end));
-}
 
 static void scan_memory_slot(void)
 {
