@@ -11,6 +11,9 @@ typedef int BOOL;
 #define FALSE 0
 #define TRUE  1
 
+#define true 1
+#define false 0
+
 /* Explicitly-sized versions of integer types */
 typedef char int8_t;
 typedef unsigned char uint8_t;
