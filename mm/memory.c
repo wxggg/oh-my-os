@@ -3,6 +3,7 @@
 #include <stdio.h>
 #include <memory.h>
 #include <stdlib.h>
+#include <x86.h>
 
 #define E820_MAX	20
 #define E820_MEM	1
@@ -38,9 +39,15 @@ struct kernel_memory {
 
 	pa_t free_start;
 	pa_t free_end;
+
+	struct page *pgdir_page;
+	pa_t cr3;
+	pa_t* pgdir;
 };
 
 struct kernel_memory kmemory = {};
+
+#define VPT 0xfac00000
 
 static void scan_memory_slot(void)
 {
@@ -71,13 +78,13 @@ static void scan_memory_slot(void)
 	}
 
 	kmemory.start = 0x0;
-	kmemory.size = kmemory.end - kmemory.start;
 
 	kmemory.page_max = kmemory.pa_max / PAGE_SIZE;
 	kmemory.pages = (struct page *) round_up((pa_t)end, PAGE_SIZE);
 
 	kmemory.end = __pa((kva_t)kmemory.pages
 			+ kmemory.page_max * sizeof(struct page));
+	kmemory.size = kmemory.end - kmemory.start;
 
 	kmemory.free_start = kmemory.end;
 	kmemory.free_end = kmap->addr + kmap->size;
@@ -106,4 +113,19 @@ static void scan_memory_slot(void)
 void memory_init(void)
 {
 	scan_memory_slot();
+
+	page_init(kmemory.pages);
+
+	kmemory.pgdir_page = alloc_page();
+	kmemory.cr3 = page_address(kmemory.pgdir_page);
+	kmemory.pgdir = (pa_t *)__kva(kmemory.pgdir);
+
+	/*
+	 * insert one item in pgdir to map virtual page
+	 * table to VPT. One pde covers 1<<10 * 1<<12 = 4MB
+	 */
+	set_pde(kmemory.pgdir + pde_index(VPT), kmemory.cr3, PTE_P | PTE_W);
+
+	/* map kernel memory to the start of 0xC0000000 */
+	page_map(kmemory.pgdir, KERNEL_VADDR_SHIFT, 0x0, kmemory.size, PTE_W);
 }
