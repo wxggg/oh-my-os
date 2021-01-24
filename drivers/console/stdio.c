@@ -38,10 +38,17 @@ int puts(const char *str)
  * - only support string for every parameters
  * - will end with '\n' automatically
  */
-int print(int count, ...)
+int print(uint16_t count, ...)
 {
     va_list args;
     int r = 0;
+
+	if (count > FORMATBUF_NR) {
+		puts("print error count ");
+		puts(istr(count));
+		puts("\n");
+		return -1;
+	}
 
     va_start(args, count);
     for (size_t i = 0; i < count; i++) {
@@ -57,10 +64,17 @@ int print(int count, ...)
  * - only support string for every parameters
  * - will end with '\n' automatically
  */
-int println(int count, ...)
+int println(uint16_t count, ...)
 {
     va_list args;
     int r = 0;
+
+	if (count > FORMATBUF_NR) {
+		puts("print error count ");
+		puts(istr(count));
+		puts("\n");
+		return -1;
+	}
 
     va_start(args, count);
     for (size_t i = 0; i < count; i++) {

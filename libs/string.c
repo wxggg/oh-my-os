@@ -414,6 +414,7 @@ void to_hex(unsigned int val, char *buf, int len)
 	if (val == 0) {
 		buf[0] = '0';
 		buf[1] = 0;
+		return;
 	}
 
 	while (val > 0) {

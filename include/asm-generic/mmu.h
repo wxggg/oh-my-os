@@ -54,9 +54,24 @@
     .byte(((base) >> 16) & 0xff), (0x90 | (type)),                             \
         (0xC0 | (((lim) >> 28) & 0xf)), (((base) >> 24) & 0xff)
 
+#define PAGE_OFFSET 12
 #define PAGE_SIZE 4096
 #define KERNEL_STACK_SIZE ((PAGE_SIZE) * 2)
 #define KERNEL_VADDR_SHIFT 0xC0000000
 
 #define vaddr(x) (x + KERNEL_VADDR_SHIFT)
 #define paddr(x) (x - KERNEL_VADDR_SHIFT)
+
+#define __pa(x) (x - KERNEL_VADDR_SHIFT)
+#define __kva(x) (x + KERNEL_VADDR_SHIFT)
+
+/* page item entry flags */
+#define PTE_P	(1 << 0)	/* present */
+#define PTE_W	(1 << 1)	/* writeable */
+#define PTE_U	(1 << 2)	/* user */
+#define PTE_PWT	(1 << 3)	/* write through */
+#define PTE_PCD	(1 << 4)	/* cache disable */
+#define PTE_A	(1 << 5)	/* accessed */
+#define PTE_D	(1 << 6)	/* dirty */
+#define PTE_PS	(1 << 7)	/* page size */
+
