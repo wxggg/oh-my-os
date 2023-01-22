@@ -20,9 +20,9 @@ int kern_init(void)
 
     timer_init();
 
-	graphic_init();
+    graphic_init();
 
-	memory_init();
+    memory_init();
 
     while (1) {
         halt();
