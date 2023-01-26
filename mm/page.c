@@ -27,8 +27,7 @@ struct page * find_page(pa_t pa)
 
 void manage_free_memory(pa_t start, pa_t end)
 {
-	println(4, "manage free memory: start:0x", xstr(start),
-			   "\tend:0x", xstr(end));
+	pr_info("add free memory: <0x", xstr(start), ", ", xstr(end), ">");
 
 	start = round_up(start, PAGE_SIZE);
 	end = round_down(end, PAGE_SIZE);
@@ -104,15 +103,12 @@ void page_map(pa_t *pgdir, va_t va, pa_t pa, size_t size, uint32_t perm)
 	size_t n;
 	pa_t *pte;
 
-
 	n = page_number(page_round_up(size + page_offset(va)));
 	va = page_round_down(va);
 	pa = page_round_down(pa);
 
-	println(8, "page_map va:", xstr(va),
-			" to pa:", xstr(pa),
-			" size:", xstr(size),
-			" n:", istr(n));
+	pr_info("map: <", xstr(va), "->", xstr(pa),
+		"> size:", xstr(size), " n:", dstr(n));
 
 	for(; n > 0; n--) {
 		pte = get_pte(pgdir, va);
@@ -120,8 +116,6 @@ void page_map(pa_t *pgdir, va_t va, pa_t pa, size_t size, uint32_t perm)
 
 		va += PAGE_SIZE;
 		pa += PAGE_SIZE;
-
-		/* println(4, "\tva:", xstr(va), "\tpa:", xstr(pa)); */
 	}
 }
 

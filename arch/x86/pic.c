@@ -107,7 +107,7 @@ void pic_init(void)
         pic_setmask(irq_mask);
     }
 
-    printk("pic_init finished");
+    pr_info("pic_init finished");
 }
 
 void pic_enable(unsigned int irq) { pic_setmask(pic->mask & ~(1 << irq)); }

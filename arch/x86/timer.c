@@ -49,5 +49,5 @@ void timer_init(void)
 
     pic_enable(IRQ_TIMER);
 
-    printk("init timer success");
+    pr_info("init timer success");
 }

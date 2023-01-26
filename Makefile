@@ -155,5 +155,4 @@ TARGETS: $(TARGETS)
 
 .PHONY: clean
 clean:
-	find . -type f | xargs touch
 	-$(RM) -r $(OBJDIR) $(BINDIR)

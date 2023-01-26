@@ -31,7 +31,7 @@ static inline void set_pixel(struct graphic_info *info, int16_t x, int16_t y,
 		int8_t r, int8_t g, int8_t b)
 {
 	uint8_t *p = (uint8_t *) (info->vram + info->pixelbytes * info->width * y
-							+ info->pixelbytes * x);
+			+ info->pixelbytes * x);
 	*p = b;
 	*(p + 1) = g;
 	* (p + 2) = r;
@@ -62,16 +62,16 @@ void graphic_init(void)
 	info->vram = vaddr(info->vram);
 	info->pixelbytes = info->pixelbits >> 3;
 
-	println(2, "width:", istr(info->width));
-	println(2, "height:", istr(info->height));
-	println(2, "pixelbits:", istr(info->pixelbits));
-	println(2, "vram:0x", xstr(info->vram));
-
 	fill_area_condition(info, info->width, info->height, bgcolor.r,
 			bgcolor.g, bgcolor.b, NULL);
 
 	fill_area_condition(info, info->width, info->height, maincolor.r,
 			maincolor.g, maincolor.b, circle_condition);
 
-	printk("graphic init succeed");
+	pr_info("init graphic:",
+		" <", dstr(info->width),
+		", ", dstr(info->height),
+		", ", dstr(info->pixelbits),
+		", ", xstr(info->vram),
+		"> success");
 }
