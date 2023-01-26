@@ -8,10 +8,13 @@ void serial_putc(int ch);
 void putchar(int ch);
 int puts(const char *str);
 
-int print(uint16_t count, ...);
-int println(uint16_t count, ...);
+char * get_format_buffer();
+size_t get_format_size();
 
-#define printk(x) println(1, x)
+extern const char line_end[1];
+int print_args(const char *end, ...);
+#define printk(...)  print_args(line_end, ##__VA_ARGS__, line_end)
+#define pr_info(...) printk("[kernel info]: ", __FILE__, " ", __VA_ARGS__, "\n")
 
-const char * istr(int val);
+const char * dstr(int val);
 const char * xstr(unsigned int val);

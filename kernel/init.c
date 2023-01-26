@@ -9,22 +9,20 @@ int kern_init(void) __attribute__((noreturn));
 
 int kern_init(void)
 {
-    extern char edata[], end[];
-    memset(edata, 0, end - edata);
+	extern char edata[], end[];
+	memset(edata, 0, end - edata);
 
-    serial_init();
+	serial_init();
 
-    printk("hello world!");
+	pic_init();
 
-    pic_init();
+	timer_init();
 
-    timer_init();
+	graphic_init();
 
-    graphic_init();
+	memory_init();
 
-    memory_init();
-
-    while (1) {
-        halt();
-    }
+	while (1) {
+		halt();
+	}
 }

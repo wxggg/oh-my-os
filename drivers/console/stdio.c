@@ -2,96 +2,73 @@
 #include <stdio.h>
 #include <string.h>
 
-#define FORMATBUF_NR 	16
+#define STDIO_MAX_ARGS 	32
 #define FORMATBUF_SIZE 	32
 
-static char formatbuf[FORMATBUF_NR][FORMATBUF_SIZE];
+static char formatbuf[STDIO_MAX_ARGS][FORMATBUF_SIZE];
 
 static int formatbuf_i = 0;
 
-static char * get_format_buffer()
+const char line_end[1];
+
+char * get_format_buffer()
 {
 	char * buf = &formatbuf[formatbuf_i][0];
-	formatbuf_i = (formatbuf_i + 1) % FORMATBUF_SIZE;
+	formatbuf_i = (formatbuf_i + 1) % STDIO_MAX_ARGS;
 	return buf;
+}
+
+size_t get_format_size()
+{
+	return FORMATBUF_SIZE;
 }
 
 void putchar(int ch) { serial_putc(ch); }
 
 int puts(const char *str)
 {
-    int r = 0;
+	int r = 0;
 
-    if (!str)
-        return 0;
+	if (!str)
+		return 0;
 
-    while (*str) {
-        putchar(*str++);
-        r++;
-    }
-
-    return r;
-}
-
-/**
- * print - print several strings
- * - only support string for every parameters
- * - will end with '\n' automatically
- */
-int print(uint16_t count, ...)
-{
-    va_list args;
-    int r = 0;
-
-	if (count > FORMATBUF_NR) {
-		puts("print error count ");
-		puts(istr(count));
-		puts("\n");
-		return -1;
+	while (*str) {
+		putchar(*str++);
+		r++;
 	}
 
-    va_start(args, count);
-    for (size_t i = 0; i < count; i++) {
-        r += puts(va_arg(args, char *));
-    }
-    va_end(args);
-
-    return r + 1;
+	return r;
 }
 
 /**
- * print - print several strings
- * - only support string for every parameters
- * - will end with '\n' automatically
+ * print - print all args as string, check last string as end
+ *
+ * @end: the string used to check end
  */
-int println(uint16_t count, ...)
+int print_args(const char *end, ...)
 {
-    va_list args;
-    int r = 0;
+	char *p = NULL;
+	va_list args;
+	int n = 0;
+	int ret = 0;
 
-	if (count > FORMATBUF_NR) {
-		puts("print error count ");
-		puts(istr(count));
-		puts("\n");
-		return -1;
+	va_start(args, end);
+	while (p != end && n <= STDIO_MAX_ARGS) {
+		p = va_arg(args, char *);
+		ret += puts(p);
+		n++;
 	}
+	va_end(args);
 
-    va_start(args, count);
-    for (size_t i = 0; i < count; i++) {
-        r += puts(va_arg(args, char *));
-    }
-    va_end(args);
-
-    puts("\n");
-    return r + 1;
+	return ret;
 }
 
 /**
- * istr - format value to string
+ * dstr - format value to string
  * - notice that the buffer for the string is
  *   temprarily used.
  */
-const char * istr(int val)
+const char * dstr(int val)
 {
 	char *buf = get_format_buffer();
 	to_str(val, buf, FORMATBUF_SIZE);
@@ -106,6 +83,8 @@ const char * istr(int val)
 const char * xstr(unsigned int val)
 {
 	char *buf = get_format_buffer();
-	to_hex(val, buf, FORMATBUF_SIZE);
+	buf[0] = '0';
+	buf[1] = 'x';
+	to_hex(val, buf + 2, FORMATBUF_SIZE - 2);
 	return buf;
 }

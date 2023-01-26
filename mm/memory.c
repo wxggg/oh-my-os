@@ -4,6 +4,7 @@
 #include <memory.h>
 #include <stdlib.h>
 #include <x86.h>
+#include <string.h>
 
 #define E820_MAX	20
 #define E820_MEM	1
@@ -26,19 +27,12 @@ struct e820 {
 
 struct kernel_memory {
 	struct e820 *e820;
-	size_t index;
 
-	/* [start end) */
-	pa_t start;
-	pa_t end;
-	size_t size;
+	struct range kernel_range;
 
 	pa_t pa_max;
 	uint32_t page_max;
 	struct page *pages; /* va */
-
-	pa_t free_start;
-	pa_t free_end;
 
 	struct page *pgdir_page;
 	pa_t cr3;
@@ -49,59 +43,84 @@ struct kernel_memory kmemory = {};
 
 #define VPT 0xfac00000
 
+const char *range_str(struct range *r)
+{
+	char *buf = get_format_buffer();
+	size_t size = get_format_size();
+	size_t len;
+	char *p = buf;
+
+	p[0] = '<';
+	p[1] = '0';
+	p[2] = 'x';
+	p += 3;
+	size -= 3;
+
+	to_hex(r->start, p, size);
+	len = strlen(p);
+	p += len;
+	size -= len;
+
+	p[0] = ',';
+	p[1] = ' ';
+	p += 2;
+	size -= 2;
+
+	to_hex(r->end, p, size);
+	len = strlen(p);
+	p += len;
+	p[0] = '>';
+
+	return buf;
+}
+
 static void scan_memory_slot(void)
 {
 	struct e820 *e820 = (struct e820 *) __kva(0x8000);
-	struct e820_map *map, *kmap;
+	struct e820_map *map;
 	extern char end[];
+	struct range free_range;
+	size_t i, index;
 
 	kmemory.e820 = e820;
 	kmemory.pa_max = 0x0;
 
-	for (size_t i = 0; i < e820->n; i++) {
+	for (i = 0; i < e820->n; i++) {
 		map = &e820->map[i];
-		println(8,
-				"\ti:",		 istr(i),
-				"\taddr:0x", xstr(map->addr),
-				"\tsize:0x", xstr(map->size),
-				"\ttype:0x", xstr(map->type));
+
+		pr_info("scan memory slot: <", xstr(map->addr), ", ",
+			xstr(map->addr + map->size - 1), "> type:", dstr(map->type));
 
 		if (map->type == E820_MEM) {
 			if (map->addr < (size_t)__pa(end)
 					&& (size_t)__pa(end) < (map->addr + map->size)) {
-				kmemory.index = i;
-				kmap = map;
+				index = i;
 			}
 
 			kmemory.pa_max = max(kmemory.pa_max, map->addr + map->size);
 		}
 	}
 
-	kmemory.start = 0x0;
 
 	kmemory.page_max = kmemory.pa_max / PAGE_SIZE;
 	kmemory.pages = (struct page *) round_up((pa_t)end, PAGE_SIZE);
 
-	kmemory.end = __pa((kva_t)kmemory.pages
+	kmemory.kernel_range.start = 0x0;
+	kmemory.kernel_range.end = __pa((kva_t)kmemory.pages
 			+ kmemory.page_max * sizeof(struct page));
-	kmemory.size = kmemory.end - kmemory.start;
+	kmemory.kernel_range.end = round_up(kmemory.kernel_range.end, PAGE_SIZE) - 1;
 
-	kmemory.free_start = kmemory.end;
-	kmemory.free_end = kmap->addr + kmap->size;
+	map = &e820->map[index];
+	free_range.start = kmemory.kernel_range.end + 1;
+	free_range.end = map->addr + map->size - 1;
 
-	printk("kernel memory:");
-	println(2, "\tindex:", xstr(kmemory.index));
-	println(2, "\tstart:0x", xstr(kmemory.start));
-	println(2, "\tend:0x", xstr(kmemory.end));
-	println(2, "\tsize:0x", xstr(kmemory.size));
-	println(2, "\tpage_max:", istr(kmemory.page_max));
-	println(2, "\tfree_start:0x", xstr(kmemory.free_start));
-	println(2, "\tfree_end:0x", xstr(kmemory.free_end));
+	pr_info("kernel range:", range_str(&kmemory.kernel_range),
+		" free range:", range_str(&free_range));
 
-	manage_free_memory(kmemory.free_start, kmemory.free_end);
+	manage_free_memory(free_range.start, free_range.end);
 
 	/* memory after kernel should be added to memory manger */
-	for (size_t i = kmemory.index + 1; i < e820->n; i++) {
+	for (size_t i = index + 1; i < e820->n; i++) {
 		map = &e820->map[i];
 
 		if (map->type == E820_MEM) {
@@ -127,5 +146,6 @@ void memory_init(void)
 	set_pde(kmemory.pgdir + pde_index(VPT), kmemory.cr3, PTE_P | PTE_W);
 
 	/* map kernel memory to the start of 0xC0000000 */
-	page_map(kmemory.pgdir, KERNEL_VADDR_SHIFT, 0x0, kmemory.size, PTE_W);
+	page_map(kmemory.pgdir, KERNEL_VADDR_SHIFT, 0x0,
+		 range_size(&kmemory.kernel_range), PTE_W);
 }

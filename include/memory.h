@@ -10,6 +10,17 @@ struct page {
 	bool used;
 };
 
+struct range {
+	uintptr_t start;
+	uintptr_t end;
+};
+
+const char *range_str(struct range *r);
+static inline size_t range_size(struct range *r)
+{
+	return (r->end - r->start + 1);
+}
+
 void memory_init(void);
 
 void manage_free_memory(pa_t start, pa_t end);
