@@ -1,5 +1,5 @@
 #include <stdio.h>
-#include <asm-generic/mmu.h>
+#include <memory.h>
 
 struct color {
 	uint8_t r;
@@ -58,8 +58,8 @@ static bool circle_condition(int16_t x, int16_t y)
 
 void graphic_init(void)
 {
-	struct graphic_info *info = (struct graphic_info *) vaddr(0x0);
-	info->vram = vaddr(info->vram);
+	struct graphic_info *info = (struct graphic_info *) phys_to_virt(0x0);
+	info->vram = phys_to_virt(info->vram);
 	info->pixelbytes = info->pixelbits >> 3;
 
 	fill_area_condition(info, info->width, info->height, bgcolor.r,

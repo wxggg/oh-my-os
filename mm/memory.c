@@ -30,10 +30,6 @@ struct kernel_memory {
 
 	struct range kernel_range;
 
-	pa_t pa_max;
-	uint32_t page_max;
-	struct page *pages; /* va */
-
 	struct page *pgdir_page;
 	pa_t cr3;
 	pa_t* pgdir;
@@ -76,15 +72,13 @@ const char *range_str(struct range *r)
 
 static void scan_memory_slot(void)
 {
-	struct e820 *e820 = (struct e820 *) __kva(0x8000);
+	struct e820 *e820 = (struct e820 *) phys_to_virt(0x8000);
 	struct e820_map *map;
 	extern char end[];
 	struct range free_range;
 	size_t i, index;
 
 	kmemory.e820 = e820;
-	kmemory.pa_max = 0x0;
-
 	for (i = 0; i < e820->n; i++) {
 		map = &e820->map[i];
 
@@ -92,23 +86,15 @@ static void scan_memory_slot(void)
 			xstr(map->addr + map->size - 1), "> type:", dstr(map->type));
 
 		if (map->type == E820_MEM) {
-			if (map->addr < (size_t)__pa(end)
-					&& (size_t)__pa(end) < (map->addr + map->size)) {
+			if (map->addr < virt_to_phys(end) &&
+			    virt_to_phys(end) < (map->addr + map->size)) {
 				index = i;
 			}
-
-			kmemory.pa_max = max(kmemory.pa_max, map->addr + map->size);
 		}
 	}
 
-
-	kmemory.page_max = kmemory.pa_max / PAGE_SIZE;
-	kmemory.pages = (struct page *) round_up((pa_t)end, PAGE_SIZE);
-
 	kmemory.kernel_range.start = 0x0;
-	kmemory.kernel_range.end = __pa((kva_t)kmemory.pages
-			+ kmemory.page_max * sizeof(struct page));
-	kmemory.kernel_range.end = round_up(kmemory.kernel_range.end, PAGE_SIZE) - 1;
+	kmemory.kernel_range.end = round_up_page((uintptr_t)end);
 
 	map = &e820->map[index];
 	free_range.start = kmemory.kernel_range.end + 1;
@@ -117,14 +103,14 @@ static void scan_memory_slot(void)
 	pr_info("kernel range:", range_str(&kmemory.kernel_range),
 		" free range:", range_str(&free_range));
 
-	manage_free_memory(free_range.start, free_range.end);
+	init_free_area(free_range.start, free_range.end);
 
 	/* memory after kernel should be added to memory manger */
-	for (size_t i = index + 1; i < e820->n; i++) {
+	for (i = index + 1; i < e820->n; i++) {
 		map = &e820->map[i];
 
 		if (map->type == E820_MEM) {
-			manage_free_memory(map->addr, map->addr + map->size);
+			init_free_area(map->addr, map->addr + map->size);
 		}
 	}
 }
@@ -133,11 +119,9 @@ void memory_init(void)
 {
 	scan_memory_slot();
 
-	page_init(kmemory.pages);
-
 	kmemory.pgdir_page = alloc_page();
-	kmemory.cr3 = page_address(kmemory.pgdir_page);
-	kmemory.pgdir = (pa_t *)__kva(kmemory.pgdir);
+	kmemory.cr3 = page_to_phys(kmemory.pgdir_page);
+	kmemory.pgdir = (void *)phys_to_virt(kmemory.pgdir);
 
 	/*
 	 * insert one item in pgdir to map virtual page

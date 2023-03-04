@@ -55,15 +55,9 @@
         (0xC0 | (((lim) >> 28) & 0xf)), (((base) >> 24) & 0xff)
 
 #define PAGE_OFFSET 12
-#define PAGE_SIZE 4096
+#define PAGE_SIZE (1 << PAGE_OFFSET)
 #define KERNEL_STACK_SIZE ((PAGE_SIZE) * 2)
 #define KERNEL_VADDR_SHIFT 0xC0000000
-
-#define vaddr(x) (x + KERNEL_VADDR_SHIFT)
-#define paddr(x) (x - KERNEL_VADDR_SHIFT)
-
-#define __pa(x) (x - KERNEL_VADDR_SHIFT)
-#define __kva(x) (x + KERNEL_VADDR_SHIFT)
 
 /* page item entry flags */
 #define PTE_P	(1 << 0)	/* present */

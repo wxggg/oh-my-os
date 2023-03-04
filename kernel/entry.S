@@ -3,7 +3,7 @@
 .text
 .global kern_entry
 kern_entry:
-	lgdt (paddr(__gdtesc))
+	lgdt (__gdtesc - KERNEL_VADDR_SHIFT)
 	movl $KERNEL_DS, %eax
 	movw %ax, %ds
 	movw %ax, %es
@@ -35,4 +35,4 @@ __gdt:
 	SEG_ASM(STA_W, - KERNEL_VADDR_SHIFT, 0xFFFFFFFF)
 __gdtesc:
 	.word 0x17  				# sizeof(gdt) - 1
-	.long (paddr(__gdt))		# address gdt
+	.long (__gdt - KERNEL_VADDR_SHIFT)	# address gdt

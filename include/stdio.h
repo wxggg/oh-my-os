@@ -14,7 +14,8 @@ size_t get_format_size();
 extern const char line_end[1];
 int print_args(const char *end, ...);
 #define printk(...)  print_args(line_end, ##__VA_ARGS__, line_end)
-#define pr_info(...) printk("[kernel info]: ", __FILE__, " ", __VA_ARGS__, "\n")
+#define pr_info(...) printk("[kernel  info]: ", __FILE__, " ", __VA_ARGS__, "\n")
+#define pr_err(...)  printk("[kernel error]: ", __FILE__, " ", __VA_ARGS__, "\n")
 
 const char * dstr(int val);
 const char * xstr(unsigned int val);

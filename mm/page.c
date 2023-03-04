@@ -2,69 +2,152 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <kernel.h>
 
-struct page_manager {
-	struct page *pages;
+/* use buddy algorithm to allocate free pages,
+ * support physical address up to 4GB, totally 1024 * 1024 pages.
+ */
 
-	struct page *free_pages;
-	size_t total;
+#define TOTAL_PAGES (1024 * 1024)
+#define MAX_ORDER 10
 
-	size_t allocated;
-	size_t index;
-};
+struct page pages[TOTAL_PAGES];
+struct list_node free_lists[MAX_ORDER + 1];
 
-struct page_manager manager = {};
-
-pa_t page_address(struct page *page)
+unsigned long page_to_pfn(struct page *page)
 {
-	return (pa_t)((page - manager.pages) << PAGE_OFFSET);
+	return page - pages;
 }
 
-struct page * find_page(pa_t pa)
+struct page *pfn_to_page(unsigned long long pfn)
 {
-	return &manager.pages[pa >> PAGE_OFFSET];
+	return &pages[pfn];
 }
 
-void manage_free_memory(pa_t start, pa_t end)
+static inline struct page *page_buddy(struct page *page)
 {
-	pr_info("add free memory: <0x", xstr(start), ", ", xstr(end), ">");
+	return &pages[page_to_pfn(page) ^ (1 << page->order)];
+}
 
-	start = round_up(start, PAGE_SIZE);
-	end = round_down(end, PAGE_SIZE);
+static void page_set_free(struct page *page, unsigned int order)
+{
+	page->free = true;
+	page->order = order;
+	list_add_to_head(&free_lists[order], &page->node);
+}
 
-	manager.total = (end - start) / PAGE_SIZE;
-	manager.free_pages = find_page(start);
-	manager.index = 0;
-	manager.allocated = 0;
+void init_free_area(unsigned long long start, unsigned long long end)
+{
+	unsigned long long split_start, split_end, addr;
 
-	for (size_t i = 0; i < manager.total; i++) {
-		manager.free_pages[i].used = false;
+	start = round_up_page(start);
+	end = round_down_page(end);
+
+	if (start >= end)
+		return;
+
+	/* split <start, end> to three parts */
+	split_start = round_up(start, PAGE_SIZE << MAX_ORDER);
+	split_end = round_down(end, PAGE_SIZE << MAX_ORDER);
+
+	if (split_start >= split_end) {
+		/* init as single page */
+		addr = start;
+		while (addr < end) {
+			page_set_free(phys_to_page(addr), 0);
+			addr += PAGE_SIZE;
+		}
+	} else {
+
+		/* init as single page */
+		addr = start;
+		while (addr < split_start) {
+			page_set_free(phys_to_page(addr), 0);
+			addr += PAGE_SIZE;
+		}
+
+		/* init as max order pages */
+		while (addr < split_end) {
+			page_set_free(phys_to_page(addr), MAX_ORDER);
+			addr += PAGE_SIZE << MAX_ORDER;
+		}
+
+		/* init as single page */
+		while (addr < end) {
+			page_set_free(phys_to_page(addr), 0);
+			addr += PAGE_SIZE;
+		}
 	}
+
+	for (addr = start; addr < end; addr += PAGE_SIZE)
+		page_set_available(phys_to_page(addr));
 }
 
-struct page * alloc_page()
+static inline unsigned int get_order(unsigned int n)
 {
-	struct page *page = NULL;
+	unsigned long order = 0;
+	while ((1 << order) <= n && order <= MAX_ORDER)
+		order++;
 
-	if (manager.allocated >= manager.total)
+	return order - 1;
+}
+
+struct page *alloc_pages(unsigned int n)
+{
+	unsigned long order;
+	unsigned long i;
+	struct list_node *node;
+	struct page *page, *buddy;
+
+	if (n > 1 << MAX_ORDER)
 		return NULL;
 
-	while (manager.free_pages[manager.index % manager.total].used == true) {
-		manager.index++;
+	order = get_order(n);
+
+	for (i = order; i <= MAX_ORDER; i++)
+	{
+		if (!list_empty(&free_lists[i]))
+		{
+			node = list_next(&free_lists[i]);
+			list_remove(node);
+			page = container_of(node, struct page, node);
+
+			assert(i == page->order);
+
+			while (page->order > order)
+			{
+				page->order--;
+				buddy = page_buddy(page);
+				assert(page_available(buddy));
+				page_set_free(buddy, buddy->order);
+			}
+
+			page->free = false;
+			return page;
+		}
 	}
 
-	manager.index = manager.index % manager.total;
-	page = &manager.free_pages[manager.index];
-	page->used = true;
-	manager.allocated++;
-
-	return page;
+	return NULL;
 }
 
-void free_page(struct page *page)
+void free_pages(struct page *page)
 {
-	page->used = false;
-	manager.allocated--;
+	struct page *buddy;
+
+	while (page->order < MAX_ORDER)
+	{
+		buddy = page_buddy(page);
+
+		if (!page_available(buddy) || !page->free)
+			break;
+
+		if (buddy < page)
+			page = buddy;
+
+		page->order++;
+	}
+
+	page_set_free(page, page->order);
 }
 
 /*
@@ -77,15 +160,14 @@ static pa_t* get_pte(pa_t *pgdir, va_t va)
 	pa_t page_pa;
 
 	if (!(*pde & PTE_P)) {
-
 		page = alloc_page();
-		page_pa = page_address(page);
-		memset((void *)__kva(page_pa), 0, PAGE_SIZE);
+		page_pa = page_to_phys(page);
+		memset((void *)phys_to_virt(page_pa), 0, PAGE_SIZE);
 
 		set_pde(pde, page_pa, PTE_P | PTE_W);
 	}
 
-	return (pa_t *)(*pde) + pte_index(va);
+	return (pa_t *)(*pde) + pde_index(va);
 }
 
 void set_pde(pa_t* pde, pa_t pa, uint32_t perm)
@@ -100,26 +182,19 @@ void set_pte(pa_t* pte, pa_t pa, uint32_t perm)
 
 void page_map(pa_t *pgdir, va_t va, pa_t pa, size_t size, uint32_t perm)
 {
-	size_t n;
 	pa_t *pte;
+	va_t end;
 
-	n = page_number(page_round_up(size + page_offset(va)));
-	va = page_round_down(va);
-	pa = page_round_down(pa);
+	va = round_down_page(va);
+	pa = round_down_page(pa);
+	end = round_up_page(va + size);
 
-	pr_info("map: <", xstr(va), "->", xstr(pa),
-		"> size:", xstr(size), " n:", dstr(n));
+	pr_info("map: <", xstr(va), "->", xstr(pa), "> size:", xstr(size));
 
-	for(; n > 0; n--) {
+	while (va < end) {
 		pte = get_pte(pgdir, va);
 		set_pte(pte, pa, PTE_P | perm);
-
 		va += PAGE_SIZE;
 		pa += PAGE_SIZE;
 	}
-}
-
-void page_init(struct page *pages)
-{
-	manager.pages = pages;
 }
