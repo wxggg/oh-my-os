@@ -4,6 +4,7 @@
 #include <x86.h>
 #include <graphic.h>
 #include <memory.h>
+#include <kmalloc.h>
 
 int kern_init(void) __attribute__((noreturn));
 

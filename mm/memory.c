@@ -5,6 +5,7 @@
 #include <stdlib.h>
 #include <x86.h>
 #include <string.h>
+#include <kmalloc.h>
 
 #define E820_MAX	20
 #define E820_MEM	1
@@ -132,4 +133,6 @@ void memory_init(void)
 	/* map kernel memory to the start of 0xC0000000 */
 	page_map(kmemory.pgdir, KERNEL_VADDR_SHIFT, 0x0,
 		 range_size(&kmemory.kernel_range), PTE_W);
+
+	kmalloc_init();
 }
