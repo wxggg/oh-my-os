@@ -26,7 +26,7 @@ DECLARE_EARYLY_SLAB(64);
 DECLARE_EARYLY_SLAB(128);
 DECLARE_EARYLY_SLAB(256);
 
-static uint32_t get_slab_size(uint32_t size)
+uint32_t get_slab_size(uint32_t size)
 {
 	uint32_t slab_size = 8;
 
@@ -61,7 +61,7 @@ static struct early_slab *get_early_slab(uint32_t slab_size)
 	return NULL;
 }
 
-void kmalloc_init(void)
+void kmalloc_early_init(void)
 {
 	struct early_slab *slab;
 	uint32_t slab_size;
@@ -103,8 +103,10 @@ void kfree(void *ptr)
 
 	for (slab_size = 8; slab_size <= 256; slab_size <<= 1) {
 		slab = get_early_slab(slab_size);
-		if (in_range(ptr, slab->buf, slab_size * 1024))
+		if (in_range(ptr, slab->buf, slab_size * 1024)) {
 			slab->free_stack[slab->free_count++] = ptr;
+			return;
+		}
 	}
 }
 

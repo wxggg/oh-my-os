@@ -69,9 +69,9 @@ void graphic_init(void)
 			maincolor.g, maincolor.b, circle_condition);
 
 	pr_info("init graphic:",
-		" <", dstr(info->width),
-		", ", dstr(info->height),
-		", ", dstr(info->pixelbits),
-		", ", xstr(info->vram),
+		" <", dec(info->width),
+		", ", dec(info->height),
+		", ", dec(info->pixelbits),
+		", ", hex(info->vram),
 		"> success");
 }

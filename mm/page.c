@@ -189,7 +189,7 @@ void page_map(pa_t *pgdir, va_t va, pa_t pa, size_t size, uint32_t perm)
 	pa = round_down_page(pa);
 	end = round_up_page(va + size);
 
-	pr_info("map: <", xstr(va), "->", xstr(pa), "> size:", xstr(size));
+	pr_info("map: <", hex(va), "->", hex(pa), "> size:", hex(size));
 
 	while (va < end) {
 		pte = get_pte(pgdir, va);

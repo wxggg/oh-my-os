@@ -13,17 +13,6 @@ struct page {
 	bool free;
 };
 
-struct range {
-	uintptr_t start;
-	uintptr_t end;
-};
-
-const char *range_str(struct range *r);
-static inline size_t range_size(struct range *r)
-{
-	return (r->end - r->start + 1);
-}
-
 #define in_range(x, start, length) \
 	(uintptr_t)x >= (uintptr_t)start && \
 	(uintptr_t)x < ((uintptr_t)start + (size_t)length)

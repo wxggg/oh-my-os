@@ -1,5 +1,9 @@
 #include <string.h>
 #include <x86.h>
+#include <kmalloc.h>
+#include <error.h>
+#include <kernel.h>
+#include <memory.h>
 
 static const char * __str_hex = "0123456789abcdef";
 
@@ -377,15 +381,14 @@ void reverse_str(char *buf, int i, int j)
 /*
  * to_str - format integer to string
  */
-void to_str(int val, char *buf, int len)
+int to_str(int val, char *buf, int len)
 {
 	int i = 0;
 	int flag = 0;
 
 	if (val == 0) {
 		buf[0] = '0';
-		buf[1] = '\0';
-		return;
+		return 1;
 	}
 
 	if (val < 0) {
@@ -400,21 +403,22 @@ void to_str(int val, char *buf, int len)
 	}
 
 	reverse_str(buf, flag < 0 ? 1 : 0, i - 1);
-
-	buf[i] = '\0';
+	return i;
 }
 
 /*
  * to_hex - format integer to heximal
  */
-void to_hex(unsigned int val, char *buf, int len)
+int to_hex(unsigned int val, char *buf, int len)
 {
 	int i = 0;
 
+	buf[i++] = '0';
+	buf[i++] = 'x';
+
 	if (val == 0) {
-		buf[0] = '0';
-		buf[1] = 0;
-		return;
+		buf[i++] = '0';
+		return i;
 	}
 
 	while (val > 0) {
@@ -422,8 +426,113 @@ void to_hex(unsigned int val, char *buf, int len)
 		val /= 16;
 	}
 
-	reverse_str(buf, 0, i - 1);
-
-	buf[i] = 0;
+	reverse_str(buf, 2, i - 1);
+	return i;
 }
 
+string *string_create(void)
+{
+	string *s;
+
+	s = kmalloc(sizeof(*s));
+	if (!s)
+		return NULL;
+
+	s->str = NULL;
+	s->length = 0;
+	s->capacity = 0;
+	return s;
+}
+
+void string_destroy(string *s)
+{
+	if (!s)
+		return;
+
+	if (s->str)
+		kfree(s->str);
+
+	kfree(s);
+}
+
+static int string_try_expand(string *s, size_t size)
+{
+	char *str;
+
+	if (s->capacity >= size)
+		return 0;
+
+	/* need 1 more byte for end \0 */
+	size = get_slab_size(size + 1);
+	assert(size != PAGE_SIZE && s->capacity < size);
+
+	str = kmalloc(size);
+	if (!str)
+		return -ENOMEM;
+
+	if (s->str) {
+		strncpy(str, s->str, s->length);
+		kfree(s->str);
+	}
+
+	s->capacity = size;
+	s->str = str;
+	return 0;
+}
+
+int string_append_char(string *s, char c)
+{
+	int ret;
+
+	ret = string_try_expand(s, s->length + 1);
+	if (ret)
+		return ret;
+
+	*(s->str + s->length) = c;
+	s->length++;
+	s->str[s->length] = 0;
+	return 0;
+}
+
+int string_append_strn(string *s, const char *str, size_t length)
+{
+	int ret;
+
+	if (!str)
+		return 0;
+
+	ret = string_try_expand(s, s->length + length);
+	if (ret)
+		return ret;
+
+	strncpy(s->str + s->length, str, length);
+	s->length += length;
+	s->str[s->length] = 0;
+	return 0;
+}
+
+int string_append_str(string *s, const char *str)
+{
+    return string_append_strn(s, str, strlen(str));
+}
+
+int string_append(string *s, string *a)
+{
+	if (!a || !a->str)
+		return 0;
+
+	return string_append_strn(s, a->str, a->length);
+}
+
+int string_append_int(string *s, int val, bool hex)
+{
+	char buf[32];
+	int length;
+
+	if (hex)
+		length = to_hex(val, buf, 32);
+	else
+		length = to_str(val, buf, 32);
+
+	return string_append_strn(s, buf, length);
+}

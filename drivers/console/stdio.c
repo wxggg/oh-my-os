@@ -3,24 +3,19 @@
 #include <string.h>
 
 #define STDIO_MAX_ARGS 	32
-#define FORMATBUF_SIZE 	32
 
-static char formatbuf[STDIO_MAX_ARGS][FORMATBUF_SIZE];
-
-static int formatbuf_i = 0;
+static string g_out_string[STDIO_MAX_ARGS];
+static int index = 0;
 
 const char line_end[1];
 
-char * get_format_buffer()
+string *get_out_string(void)
 {
-	char * buf = &formatbuf[formatbuf_i][0];
-	formatbuf_i = (formatbuf_i + 1) % STDIO_MAX_ARGS;
-	return buf;
-}
-
-size_t get_format_size()
-{
-	return FORMATBUF_SIZE;
+	string *s;
+	index = (index + 1) % STDIO_MAX_ARGS;
+	s = &g_out_string[index];
+	s->length = 0;
+	return s;
 }
 
 void putchar(int ch) { serial_putc(ch); }
@@ -61,30 +56,4 @@ int print_args(const char *end, ...)
 	va_end(args);
 
 	return ret;
-}
-
-/**
- * dstr - format value to string
- * - notice that the buffer for the string is
- *   temprarily used.
- */
-const char * dstr(int val)
-{
-	char *buf = get_format_buffer();
-	to_str(val, buf, FORMATBUF_SIZE);
-	return buf;
-}
-
-/**
- * xstr - format value to hex string
- * - notice that the buffer for the string is
- *   temprarily used.
- */
-const char * xstr(unsigned int val)
-{
-	char *buf = get_format_buffer();
-	buf[0] = '0';
-	buf[1] = 'x';
-	to_hex(val, buf + 2, FORMATBUF_SIZE - 2);
-	return buf;
 }

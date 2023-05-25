@@ -2,6 +2,12 @@
 
 #include <types.h>
 
+typedef struct string {
+	char *str;
+	size_t length;
+	size_t capacity;
+} string;
+
 size_t strlen(const char *s);
 size_t strnlen(const char *s, size_t len);
 
@@ -21,5 +27,11 @@ void *memcpy(void *dst, const void *src, size_t n);
 int memcmp(const void *v1, const void *v2, size_t n);
 
 void reverse_str(char *buf, int i, int j);
-void to_str(int val, char *buf, int len);
-void to_hex(unsigned int val, char *buf, int len);
+
+string *string_create(void);
+void string_destroy(string *s);
+int string_append_char(string *s, char c);
+int string_append_strn(string *s, const char *str, size_t length);
+int string_append_str(string *s, const char *str);
+int string_append(string *s, string *a);
+int string_append_int(string *s, int val, bool hex);

@@ -29,7 +29,8 @@ struct e820 {
 struct kernel_memory {
 	struct e820 *e820;
 
-	struct range kernel_range;
+	unsigned long start;
+	unsigned long end;
 
 	struct page *pgdir_page;
 	pa_t cr3;
@@ -40,71 +41,41 @@ struct kernel_memory kmemory = {};
 
 #define VPT 0xfac00000
 
-const char *range_str(struct range *r)
-{
-	char *buf = get_format_buffer();
-	size_t size = get_format_size();
-	size_t len;
-	char *p = buf;
-
-	p[0] = '<';
-	p[1] = '0';
-	p[2] = 'x';
-	p += 3;
-	size -= 3;
-
-	to_hex(r->start, p, size);
-	len = strlen(p);
-	p += len;
-	size -= len;
-
-	p[0] = ',';
-	p[1] = ' ';
-	p += 2;
-	size -= 2;
-
-	to_hex(r->end, p, size);
-	len = strlen(p);
-	p += len;
-	p[0] = '>';
-
-	return buf;
-}
-
 static void scan_memory_slot(void)
 {
 	struct e820 *e820 = (struct e820 *) phys_to_virt(0x8000);
 	struct e820_map *map;
 	extern char end[];
-	struct range free_range;
-	size_t i, index;
+	unsigned long free_start, free_end;
+	int i, index;
 
 	kmemory.e820 = e820;
 	for (i = 0; i < e820->n; i++) {
 		map = &e820->map[i];
 
-		pr_info("scan memory slot: <", xstr(map->addr), ", ",
-			xstr(map->addr + map->size - 1), "> type:", dstr(map->type));
+		pr_info("scan memory slot: ",
+			"type: ", dec(map->type),
+			"range: ", range(map->addr, map->addr + map->size - 1), "\t\t");
 
 		if (map->type == E820_MEM) {
 			if (map->addr < virt_to_phys(end) &&
-			    virt_to_phys(end) < (map->addr + map->size)) {
+					virt_to_phys(end) < (map->addr + map->size)) {
 				index = i;
 			}
 		}
 	}
 
-	kmemory.kernel_range.start = 0x0;
-	kmemory.kernel_range.end = round_up_page((uintptr_t)end);
+	kmemory.start = 0x0;
+	kmemory.end = round_up_page((uintptr_t)end);
 
 	map = &e820->map[index];
-	free_range.start = kmemory.kernel_range.end + 1;
-	free_range.end = map->addr + map->size - 1;
+	free_start = kmemory.end + 1;
+	free_end = map->addr + map->size - 1;
 
-	pr_info("kernel range:", range_str(&kmemory.kernel_range),
-		" free range:", range_str(&free_range));
+	pr_info("kernel range: ", range(kmemory.start, kmemory.end),
+		"free range: ", range(free_start, free_end));
 
-	init_free_area(free_range.start, free_range.end);
+	init_free_area(free_start, free_end);
 
 	/* memory after kernel should be added to memory manger */
 	for (i = index + 1; i < e820->n; i++) {
@@ -132,7 +103,7 @@ void memory_init(void)
 
 	/* map kernel memory to the start of 0xC0000000 */
 	page_map(kmemory.pgdir, KERNEL_VADDR_SHIFT, 0x0,
-		 range_size(&kmemory.kernel_range), PTE_W);
+		 kmemory.end - kmemory.start + 1, PTE_W);
 
-	kmalloc_init();
+	pr_info("memory init success");
 }

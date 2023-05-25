@@ -13,15 +13,17 @@ int kern_init(void)
 	extern char edata[], end[];
 	memset(edata, 0, end - edata);
 
+	kmalloc_early_init();
+
 	serial_init();
 
 	pic_init();
 
 	timer_init();
 
-	graphic_init();
-
 	memory_init();
+
+	graphic_init();
 
 	while (1) {
 		halt();
