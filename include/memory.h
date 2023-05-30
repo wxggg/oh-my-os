@@ -2,10 +2,6 @@
 #include <types.h>
 #include <list.h>
 
-typedef uintptr_t pa_t;
-typedef uintptr_t kva_t;
-typedef uintptr_t va_t;
-
 struct page {
 	unsigned long flags;
 	unsigned long order;
@@ -37,29 +33,35 @@ void memory_init(void);
 #define round_up_page(x)	round_up((x), PAGE_SIZE)
 #define round_down_page(x)	round_down((x), PAGE_SIZE)
 
-void set_pde(pa_t* pde, pa_t pa, uint32_t perm);
-void set_pte(pa_t* pte, pa_t pa, uint32_t perm);
-void page_map(pa_t *pgdir, va_t va, pa_t pa, size_t size, uint32_t perm);
+void page_init(void);
+void set_pde(unsigned long* pde, unsigned long pa, uint32_t flag);
+void set_pte(unsigned long* pte, unsigned long pa, uint32_t flag);
+void page_map(unsigned long *pgdir, unsigned long va, unsigned long pa, size_t size, uint32_t flag);
+void page_table_dump(unsigned long *pgdir, unsigned long va, size_t size);
+void enable_paging(unsigned long cr3);
 
-#define virt_to_phys(x) ((uintptr_t)x - KERNEL_VADDR_SHIFT)
-#define phys_to_virt(x) ((uintptr_t)x + KERNEL_VADDR_SHIFT)
-#define phys_to_pfn(x) ((x) >> PAGE_OFFSET)
+#define virt_to_phys(x) ((uintptr_t)(x) - KERNEL_VADDR_SHIFT)
+#define phys_to_virt(x) ((uintptr_t)(x) + KERNEL_VADDR_SHIFT)
+#define phys_to_pfn(x) ((x) >> PAGE_SHIFT)
 
 unsigned long page_to_pfn(struct page *page);
-struct page *pfn_to_page(unsigned long long pfn);
+struct page *pfn_to_page(unsigned long pfn);
 
-static inline unsigned long long page_to_phys(struct page *page)
+static inline unsigned long page_to_phys(struct page *page)
 {
-	return PAGE_SIZE << page_to_pfn(page);
+	return (unsigned long)PAGE_SIZE * page_to_pfn(page);
 }
 
-static inline struct page *phys_to_page(unsigned long long phys)
+static inline struct page *phys_to_page(unsigned long phys)
 {
 	return pfn_to_page(phys_to_pfn(phys));
 }
 
-void init_free_area(unsigned long long start, unsigned long long end);
+void init_free_area(unsigned long start, unsigned long end);
 struct page *alloc_pages(unsigned int n);
 void free_pages(struct page *page);
 
 #define alloc_page() alloc_pages(1)
+
+void kernel_map(unsigned long kva, unsigned long pa, size_t size, uint32_t flag);
+void kernel_page_table_dump(unsigned long va, size_t size);

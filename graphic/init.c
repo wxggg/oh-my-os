@@ -59,8 +59,16 @@ static bool circle_condition(int16_t x, int16_t y)
 void graphic_init(void)
 {
 	struct graphic_info *info = (struct graphic_info *) phys_to_virt(0x0);
-	info->vram = phys_to_virt(info->vram);
 	info->pixelbytes = info->pixelbits >> 3;
+	unsigned long size = info->width * info->height * info->pixelbytes;
+
+	pr_info("init graphic:");
+	pr_info("\tscreen width:", dec(info->width));
+	pr_info("\tscreen height:", dec(info->height));
+	pr_info("\tpixel bits:", dec(info->pixelbits));
+	pr_info("\tvram:", hex(info->vram));
+
+	kernel_map(info->vram, info->vram, size, PTE_W);
 
 	fill_area_condition(info, info->width, info->height, bgcolor.r,
 			bgcolor.g, bgcolor.b, NULL);
@@ -68,10 +76,6 @@ void graphic_init(void)
 	fill_area_condition(info, info->width, info->height, maincolor.r,
 			maincolor.g, maincolor.b, circle_condition);
 
-	pr_info("init graphic:",
-		" <", dec(info->width),
-		", ", dec(info->height),
-		", ", dec(info->pixelbits),
-		", ", hex(info->vram),
-		"> success");
+
+	pr_info("init graphic success");
 }

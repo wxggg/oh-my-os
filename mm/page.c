@@ -1,8 +1,12 @@
+#include <asm-generic/cpu.h>
 #include <memory.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <kernel.h>
+#include <x86.h>
+
+/* #define PAGE_DEBUG */
 
 /* use buddy algorithm to allocate free pages,
  * support physical address up to 4GB, totally 1024 * 1024 pages.
@@ -12,14 +16,25 @@
 #define MAX_ORDER 10
 
 struct page pages[TOTAL_PAGES];
-struct list_node free_lists[MAX_ORDER + 1];
+static struct list_node free_lists[MAX_ORDER + 1];
+
+#ifdef PAGE_DEBUG
+#define dump_page(page) \
+	do { \
+		pr_debug("page:", hex(page), " index:", dec(page_to_pfn(page)), \
+			 " order:", dec(page->order), " free:", dec(page->free)); \
+	} while (0);
+#else
+#define dump_page(page)
+#endif
+
 
 unsigned long page_to_pfn(struct page *page)
 {
 	return page - pages;
 }
 
-struct page *pfn_to_page(unsigned long long pfn)
+struct page *pfn_to_page(unsigned long pfn)
 {
 	return &pages[pfn];
 }
@@ -34,14 +49,17 @@ static void page_set_free(struct page *page, unsigned int order)
 	page->free = true;
 	page->order = order;
 	list_add_to_head(&free_lists[order], &page->node);
+	dump_page(page);
 }
 
-void init_free_area(unsigned long long start, unsigned long long end)
+void init_free_area(unsigned long start, unsigned long end)
 {
-	unsigned long long split_start, split_end, addr;
+	unsigned long split_start, split_end, addr;
 
 	start = round_up_page(start);
 	end = round_down_page(end);
+
+	pr_debug("free range:", range(start, end));
 
 	if (start >= end)
 		return;
@@ -111,6 +129,7 @@ struct page *alloc_pages(unsigned int n)
 			node = list_next(&free_lists[i]);
 			list_remove(node);
 			page = container_of(node, struct page, node);
+			dump_page(page);
 
 			assert(i == page->order);
 
@@ -123,6 +142,7 @@ struct page *alloc_pages(unsigned int n)
 			}
 
 			page->free = false;
+			dump_page(page);
 			return page;
 		}
 	}
@@ -153,37 +173,40 @@ void free_pages(struct page *page)
 /*
  * get_pte - if pte not exist, allocate a new page
  */
-static pa_t* get_pte(pa_t *pgdir, va_t va)
+static unsigned long* get_pte(unsigned long *pgdir, unsigned long va)
 {
-	pa_t* pde = pgdir + pde_index(va);
+	unsigned long* pde = pgdir + pde_index(va);
 	struct page *page;
-	pa_t page_pa;
+	unsigned long page_pa;
+	unsigned long *pt;
 
 	if (!(*pde & PTE_P)) {
 		page = alloc_page();
+		dump_page(page);
 		page_pa = page_to_phys(page);
 		memset((void *)phys_to_virt(page_pa), 0, PAGE_SIZE);
 
-		set_pde(pde, page_pa, PTE_P | PTE_W);
+		set_pde(pde, page_pa, PDE_P | PDE_W);
 	}
 
-	return (pa_t *)(*pde) + pde_index(va);
+	pt = (void *)phys_to_virt(page_base(*pde));
+	return pt + pte_index(va);
 }
 
-void set_pde(pa_t* pde, pa_t pa, uint32_t perm)
+void set_pde(unsigned long* pde, unsigned long pa, uint32_t flag)
 {
-	*pde = pa | perm | PTE_P;
+	*pde = pa | flag | PDE_P;
 }
 
-void set_pte(pa_t* pte, pa_t pa, uint32_t perm)
+void set_pte(unsigned long* pte, unsigned long pa, uint32_t flag)
 {
-	*pte = pa | perm | PTE_P;
+	*pte = pa | flag | PTE_P;
 }
 
-void page_map(pa_t *pgdir, va_t va, pa_t pa, size_t size, uint32_t perm)
+void page_map(unsigned long *pgdir, unsigned long va, unsigned long pa, size_t size, uint32_t flag)
 {
-	pa_t *pte;
-	va_t end;
+	unsigned long *pte;
+	unsigned long end;
 
 	va = round_down_page(va);
 	pa = round_down_page(pa);
@@ -193,8 +216,59 @@ void page_map(pa_t *pgdir, va_t va, pa_t pa, size_t size, uint32_t perm)
 
 	while (va < end) {
 		pte = get_pte(pgdir, va);
-		set_pte(pte, pa, PTE_P | perm);
+		set_pte(pte, pa, PTE_P | flag);
+
 		va += PAGE_SIZE;
 		pa += PAGE_SIZE;
+	}
+}
+
+void page_table_dump(unsigned long *pgdir, unsigned long va, size_t size)
+{
+	unsigned long pde, pte, va_base, pte_va;
+	unsigned long *pt;
+	int i, j;
+
+	for (i = 0; i < 1 << 10; i++) {
+		pde = pgdir[i];
+		if (!(pde & PDE_P))
+			continue;
+
+		va_base = i * 1024 * PAGE_SIZE;
+		if (va_base < va || va_base > (va + size))
+			continue;
+
+		pt = (void *)phys_to_virt(page_base(pde));
+		printk("|-[", dec(i), "] va_base:", hex(va_base), " -> pde:", hex(pde), "\n");
+
+		for (j = 0; j < 1 << 10; j++) {
+			pte = pt[j];
+			if (!(pte & PTE_P))
+				continue;
+
+			pte_va = va_base + j * PAGE_SIZE;
+			printk("\t|-[", dec(j), "] va:", hex(pte_va), " -> pte:", hex(pte), "\n");
+		}
+	}
+}
+
+void enable_paging(unsigned long cr3)
+{
+	unsigned long cr0;
+
+	lcr3(cr3);
+	cr0 = rcr0();
+	cr0 |= CR0_PE | CR0_PG | CR0_AM | CR0_WP | CR0_NE | CR0_TS | CR0_EM | CR0_MP;
+	cr0 &= ~(CR0_TS | CR0_EM);
+	lcr0(cr0);
+}
+
+void page_init(void)
+{
+	int order;
+
+	for (order = 0; order <= MAX_ORDER; order++) {
+		free_lists[order].prev = &free_lists[order];
+		free_lists[order].next = &free_lists[order];
 	}
 }

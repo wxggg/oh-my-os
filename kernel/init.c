@@ -25,6 +25,8 @@ int kern_init(void)
 
 	graphic_init();
 
+	pr_info("kernel init success!");
+
 	while (1) {
 		halt();
 	}

@@ -28,6 +28,7 @@
 #define SEG_UTEXT 3 /* user text segment */
 #define SEG_UDATA 4 /* user data segment */
 #define SEG_TSS   5 /* task segment */
+#define SEG_MAX   6
 
 /* global descrptor numbers */
 #define GD_KTEXT ((SEG_KTEXT) << 3) /* kernel text */
@@ -54,8 +55,8 @@
     .byte(((base) >> 16) & 0xff), (0x90 | (type)),                             \
         (0xC0 | (((lim) >> 28) & 0xf)), (((base) >> 24) & 0xff)
 
-#define PAGE_OFFSET 12
-#define PAGE_SIZE (1 << PAGE_OFFSET)
+#define PAGE_SHIFT 12
+#define PAGE_SIZE (1 << PAGE_SHIFT)
 #define KERNEL_STACK_SIZE ((PAGE_SIZE) * 2)
 #define KERNEL_VADDR_SHIFT 0xC0000000
 
@@ -69,3 +70,5 @@
 #define PTE_D	(1 << 6)	/* dirty */
 #define PTE_PS	(1 << 7)	/* page size */
 
+#define PDE_P	(1 << 0)	/* present */
+#define PDE_W	(1 << 1)	/* writeable */

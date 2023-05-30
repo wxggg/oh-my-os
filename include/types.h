@@ -24,6 +24,13 @@ typedef unsigned long uint32_t;
 typedef long long int64_t;
 typedef unsigned long long uint64_t;
 
+typedef char s8;
+typedef unsigned char u8;
+typedef short s16;
+typedef unsigned short u16;
+typedef long s32;
+typedef unsigned long u32;
+
 /* *
  * Pointers and addresses are 32 bits long.
  * We use pointer types to represent addresses,
