@@ -81,7 +81,6 @@ KINCLUDE	+= 	kernel/
 
 KSRCDIR		+= 	kernel \
 				arch/x86 \
-				drivers/console \
 				graphic \
 				mm \
 

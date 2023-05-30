@@ -12,7 +12,7 @@
  * 0x43         Mode/Command register (write only, a read is ignored)
  */
 
-#include <interrupt.h>
+#include <irq.h>
 #include <stdio.h>
 #include <x86.h>
 
@@ -36,6 +36,20 @@
 
 #define TIMER_DIV(x) ((TIMER_FREQ + (x) / 2) / (x))
 
+volatile size_t ticks;
+
+size_t tick()
+{
+	return ticks;
+}
+
+static void timer_irq_handler()
+{
+	ticks++;
+	if (ticks % TICK_NUM == 0)
+		pr_info("tick");
+}
+
 /**
  * timer_init - init 8253 pit
  * generate 100 timer interrupt per second
@@ -47,7 +61,7 @@ void timer_init(void)
     outb(IO_TIMER, TIMER_DIV(TICK_NUM) % TIMER_OFFSET);
     outb(IO_TIMER, TIMER_DIV(TICK_NUM) / TIMER_OFFSET);
 
-    pic_enable(IRQ_TIMER);
-
+    pic_enable(PIC_TIMER);
+    request_irq(IRQ_TIMER, timer_irq_handler);
     pr_info("init timer success");
 }

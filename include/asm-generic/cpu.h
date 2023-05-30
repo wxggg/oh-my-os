@@ -15,3 +15,16 @@
 
 /* Eflags register */
 #define FL_IF 0x00000200 // Interrupt Flag
+
+/* hardware irq */
+#define PIC_TIMER	0
+#define PIC_KEYBD	1
+#define PIC_SLAVE	2
+#define PIC_COM1	4
+
+#define IRQ_PGFLT	14
+#define IRQ_OFFSET	32
+#define IRQ_TIMER	(IRQ_OFFSET + PIC_TIMER)
+#define IRQ_KEYBD	(IRQ_OFFSET + PIC_KEYBD)
+#define IRQ_COM1	(IRQ_OFFSET + PIC_COM1)
+#define IRQ_NUM		256
