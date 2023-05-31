@@ -87,6 +87,12 @@ static inline uint32_t read_ebp(void)
     return ebp;
 }
 
+static inline uint32_t read_eip(void) {
+    uint32_t eip;
+    asm volatile("movl 4(%%ebp), %0" : "=r" (eip));
+    return eip;
+}
+
 static inline void breakpoint(void) { asm volatile("int $3"); }
 
 static inline uint32_t read_dr(unsigned regnum)

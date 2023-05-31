@@ -17,4 +17,6 @@
 		}						\
 	} while (0)
 
+unsigned long tick();
+
 #endif

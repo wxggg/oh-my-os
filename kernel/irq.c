@@ -3,6 +3,7 @@
 #include <stdio.h>
 #include <irq.h>
 #include <error.h>
+#include <debug.h>
 
 struct gate_desc {
 	unsigned offset_15_0 : 16;
@@ -50,10 +51,10 @@ void idt_init(void)
 	pr_info("idt init success");
 }
 
-void trap(struct trapframe *tf)
+void irq_handler(struct trapframe *tf)
 {
 	if (tf->irq > IRQ_NUM) {
-		pr_err("trap: irq %d out of range", tf->irq);
+		pr_err("irq %d out of range", tf->irq);
 		return;
 	}
 
@@ -65,11 +66,14 @@ void trap(struct trapframe *tf)
 	switch (tf->irq)
 	{
 		case IRQ_PGFLT:
-			pr_err("trap: pgfault, ", hex(rcr2()));
+			pr_err("page fault, unable to access address:", hex(rcr2()));
+			backtrace();
 			while (1) {}
 			break;
 		default:
 			pr_err("trap: unknown irq ", dec(tf->irq));
+			backtrace();
+			while (1) {}
 			break;
 	}
 }

@@ -36,9 +36,9 @@
 
 #define TIMER_DIV(x) ((TIMER_FREQ + (x) / 2) / (x))
 
-volatile size_t ticks;
+volatile unsigned long ticks;
 
-size_t tick()
+inline unsigned long tick()
 {
 	return ticks;
 }

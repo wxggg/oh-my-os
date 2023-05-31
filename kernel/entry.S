@@ -51,7 +51,7 @@ __alltraps:
 
 	pushl %esp
 
-	call trap
+	call irq_handler
 
 	popl %esp
 

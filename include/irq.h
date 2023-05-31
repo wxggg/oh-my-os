@@ -1,3 +1,5 @@
+#pragma once
+
 #include <asm-generic/cpu.h>
 #include <x86.h>
 #include <types.h>
