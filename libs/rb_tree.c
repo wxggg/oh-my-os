@@ -4,6 +4,7 @@
 #include <kernel.h>
 #include <kmalloc.h>
 #include <rb_tree.h>
+#include <assert.h>
 
 #define TREE_DEBUG
 

@@ -4,6 +4,7 @@
 #include <error.h>
 #include <kernel.h>
 #include <memory.h>
+#include <assert.h>
 
 static const char * __str_hex = "0123456789abcdef";
 
@@ -464,7 +465,7 @@ static int string_try_expand(string *s, size_t size)
 
 	/* need 1 more byte for end \0 */
 	size = get_slab_size(size + 1);
-	assert(size != PAGE_SIZE && s->capacity < size);
+	assert_notrace(size != PAGE_SIZE && s->capacity < size);
 
 	str = kmalloc(size);
 	if (!str)

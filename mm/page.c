@@ -5,6 +5,8 @@
 #include <string.h>
 #include <kernel.h>
 #include <x86.h>
+#include <assert.h>
+#include <bitops.h>
 
 /* #define PAGE_DEBUG */
 
@@ -48,7 +50,7 @@ static void page_set_free(struct page *page, unsigned int order)
 {
 	page->free = true;
 	page->order = order;
-	list_add_to_head(&free_lists[order], &page->node);
+	list_insert_before(&free_lists[order], &page->node);
 	dump_page(page);
 }
 
@@ -101,26 +103,15 @@ void init_free_area(unsigned long start, unsigned long end)
 		page_set_available(phys_to_page(addr));
 }
 
-static inline unsigned int get_order(unsigned int n)
-{
-	unsigned long order = 0;
-	while ((1 << order) <= n && order <= MAX_ORDER)
-		order++;
-
-	return order - 1;
-}
-
 struct page *alloc_pages(unsigned int n)
 {
-	unsigned long order;
+	unsigned long order = fls(n - 1);
 	unsigned long i;
 	struct list_node *node;
 	struct page *page, *buddy;
 
-	if (n > 1 << MAX_ORDER)
+	if (order > MAX_ORDER)
 		return NULL;
-
-	order = get_order(n);
 
 	for (i = order; i <= MAX_ORDER; i++)
 	{
@@ -137,7 +128,7 @@ struct page *alloc_pages(unsigned int n)
 			{
 				page->order--;
 				buddy = page_buddy(page);
-				assert(page_available(buddy));
+				assert(page_available(buddy), "buddy-", dec(page_to_pfn(buddy)), " is not available");
 				page_set_free(buddy, buddy->order);
 			}
 
@@ -267,8 +258,6 @@ void page_init(void)
 {
 	int order;
 
-	for (order = 0; order <= MAX_ORDER; order++) {
-		free_lists[order].prev = &free_lists[order];
-		free_lists[order].next = &free_lists[order];
-	}
+	for (order = 0; order <= MAX_ORDER; order++)
+		list_init(&free_lists[order]);
 }

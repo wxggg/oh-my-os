@@ -1,6 +1,7 @@
 #include <asm-generic/mmu.h>
 #include <types.h>
 #include <list.h>
+#include <stdlib.h>
 
 struct page {
 	unsigned long flags;
@@ -26,8 +27,8 @@ void memory_init(void);
 #define page_base(x) ((x) & ~0xfff)
 #define page_offset(x) ((x) & 0xfff)
 
-#define page_set_reserved(page) (page->flags &= PAGE_RESERVED)
-#define page_set_available(page) (page->flags &= PAGE_AVAILABLE)
+#define page_set_reserved(page) (page->flags |= PAGE_RESERVED)
+#define page_set_available(page) (page->flags |= PAGE_AVAILABLE)
 #define page_available(page) (page->flags & PAGE_AVAILABLE)
 
 #define round_up_page(x)	round_up((x), PAGE_SIZE)

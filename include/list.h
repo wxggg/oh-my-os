@@ -1,6 +1,8 @@
 #ifndef __LIST_H__
 #define __LIST_H__
 
+#include <types.h>
+
 struct list_node {
 	struct list_node *prev;
 	struct list_node *next;
@@ -11,22 +13,20 @@ static inline void list_init(struct list_node *head)
 	head->prev = head->next = head;
 }
 
-static inline void list_add_to_head(struct list_node *head,
-				    struct list_node *node)
+static inline void list_insert_before(struct list_node *cur, struct list_node *node)
 {
-	head->prev->next = node;
-	node->next = head;
-	node->prev = head->prev;
-	head->prev = node;
+	cur->prev->next = node;
+	node->next = cur;
+	node->prev = cur->prev;
+	cur->prev = node;
 }
 
-static inline void list_add_to_tail(struct list_node *head,
-				    struct list_node *node)
+static inline void list_insert(struct list_node *cur, struct list_node *node)
 {
-	head->next->prev = node;
-	node->next = head->next;
-	node->prev = head;
-	head->next = node;
+	cur->next->prev = node;
+	node->next = cur->next;
+	node->prev = cur;
+	cur->next = node;
 }
 
 static inline void list_remove(struct list_node *node)

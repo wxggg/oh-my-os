@@ -7,6 +7,7 @@
 #include <x86.h>
 #include <string.h>
 #include <kmalloc.h>
+#include <vmalloc.h>
 
 #define E820_MAX	20
 #define E820_MEM	1
@@ -187,6 +188,8 @@ void memory_init(void)
         gdt_init();
 
 	kmemory.pgdir[0] = 0;
+
+	vmalloc_init();
 
 	pr_info("memory init success");
 }

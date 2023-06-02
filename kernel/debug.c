@@ -3,6 +3,7 @@
 #include <stdio.h>
 #include <rb_tree.h>
 #include <kernel.h>
+#include <assert.h>
 
 #define N_GSYM      0x20    // global symbol
 #define N_FNAME     0x22    // F77 function name
@@ -65,7 +66,7 @@ void backtrace(void)
 		node = rb_tree_search(g_stab_so_tree, eip);
 		if (node) {
 			stab = rb_node_value(node);
-			assert(stab);
+			assert_notrace(stab);
 			file = str + stab->n_strx;
 		} else {
 			file = "<unknown>";
@@ -74,7 +75,7 @@ void backtrace(void)
 		node = rb_tree_search(g_stab_fun_tree, eip);
 		if (node) {
 			stab = rb_node_value(node);
-			assert(stab);
+			assert_notrace(stab);
 
 			func = str + stab->n_strx;
 

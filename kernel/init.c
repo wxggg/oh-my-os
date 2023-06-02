@@ -7,6 +7,8 @@
 #include <irq.h>
 #include <rb_tree.h>
 #include <debug.h>
+#include <vmalloc.h>
+#include <assert.h>
 
 int kern_init(void) __attribute__((noreturn));
 
