@@ -8,9 +8,11 @@
 #include <string.h>
 #include <kmalloc.h>
 #include <vmalloc.h>
+#include <process.h>
+#include <assert.h>
 
 #define E820_MAX	20
-#define E820_MEM	1
+#define E820_RAM	1
 #define E820_RSV	2
 
 struct e820_map {
@@ -27,19 +29,6 @@ struct e820 {
 	int n;
 	struct e820_map map[E820_MAX];
 };
-
-struct kernel_memory {
-	struct e820 *e820;
-
-	unsigned long start;
-	unsigned long end;
-
-	struct page *pgdir_page;
-	unsigned long cr3;
-	unsigned long* pgdir;
-};
-
-struct kernel_memory kmemory = {};
 
 struct seg_desc {
         unsigned lim_15_0 : 16;
@@ -62,25 +51,43 @@ static struct pseudodesc gdt_desc = {
 	sizeof(gdt) - 1, (uintptr_t)gdt
 };
 
+#define IO_BASE 0xf0000000
 #define VPT 0xfac00000
+
+unsigned long kernel_start_pfn, kernel_end_pfn;
+unsigned long highmem_start_pfn, highmem_end_pfn;
+unsigned long vmalloc_start_pfn, vmalloc_end_pfn;
+
+static const char *e820_type_str(unsigned int type)
+{
+	switch (type)
+	{
+		case E820_RAM:
+			return "System RAM";
+		case E820_RSV:
+			return "Reserved";
+		default:
+			return "Unknown type";
+	}
+}
 
 static void scan_memory_slot(void)
 {
 	struct e820 *e820 = (struct e820 *) phys_to_virt(0x8000);
 	struct e820_map *map;
 	extern char end[];
-	unsigned long free_start, free_end;
+	unsigned long free_end_pfn;
 	int i, index;
 
-	kmemory.e820 = e820;
+	pr_info("BIOS-provided physical RAM map:");
+
 	for (i = 0; i < e820->n; i++) {
 		map = &e820->map[i];
 
-		pr_info("scan memory slot: ",
-			"type: ", dec(map->type), ", ",
-			"range: ", range(map->addr, map->addr + map->size - 1), "\t\t");
+		pr_info("BIOS-e820: [", e820_type_str(map->type), " \t",
+			range(map->addr, map->addr + map->size - 1), "]\t\t");
 
-		if (map->type == E820_MEM) {
+		if (map->type == E820_RAM) {
 			if (map->addr < virt_to_phys(end) &&
 					virt_to_phys(end) < (map->addr + map->size)) {
 				index = i;
@@ -88,25 +95,28 @@ static void scan_memory_slot(void)
 		}
 	}
 
-	kmemory.start = 0x0;
-	kmemory.end = round_up_page((uintptr_t)(virt_to_phys(end))) - 1;
+	kernel_start_pfn = 0;
+	kernel_end_pfn = phys_to_pfn(round_up_page(virt_to_phys(end)));
 
 	map = &e820->map[index];
-	free_start = kmemory.end + 1;
-	free_end = map->addr + map->size - 1;
 
-	pr_info("kernel range: ", range(kmemory.start, kmemory.end), ", ",
-		"free range: ", range(free_start, free_end));
+	highmem_start_pfn = kernel_end_pfn;
+	free_end_pfn = phys_to_pfn(map->addr + map->size);
 
-	init_free_area(free_start, free_end);
+	if (free_end_pfn <= phys_to_pfn(PHYS_HIGHMEM_END)) {
+		highmem_end_pfn = free_end_pfn;
+	} else {
+		highmem_end_pfn = phys_to_pfn(PHYS_HIGHMEM_END);
+	}
+
+	add_free_pages(highmem_start_pfn, free_end_pfn);
 
 	/* memory after kernel should be added to memory manger */
 	for (i = index + 1; i < e820->n; i++) {
 		map = &e820->map[i];
-
-		if (map->type == E820_MEM) {
-			init_free_area(map->addr, map->addr + map->size);
-		}
+		if (map->type == E820_RAM)
+			add_free_pages(phys_to_pfn(map->addr),
+				       phys_to_pfn(map->addr + map->size));
 	}
 }
 
@@ -150,44 +160,46 @@ static void gdt_init(void)
 
 void kernel_map(unsigned long kva, unsigned long pa, size_t size, uint32_t flag)
 {
-	return page_map(kmemory.pgdir, kva, pa, size, flag);
+	return page_map(current->mm->pgdir, kva, pa, size, flag);
 }
 
 void kernel_page_table_dump(unsigned long va, size_t size)
 {
-	page_table_dump(kmemory.pgdir, va, size);
+	page_table_dump(current->mm->pgdir, va, size);
 }
 
 void memory_init(void)
 {
+	struct page *page;
+	unsigned long cr3;
+
 	page_init();
 
 	scan_memory_slot();
 
-	kmemory.pgdir_page = alloc_page();
-	kmemory.cr3 = page_to_phys(kmemory.pgdir_page);
-	kmemory.pgdir = (void *)phys_to_virt(kmemory.cr3);
+	current->mm = kmalloc(sizeof(*current->mm));
+	assert_notrace(current->mm);
 
-	pr_info("kmemory.pgdir:", hex(kmemory.pgdir), ", "
-		"cr3:", hex(kmemory.cr3), ", ",
-		"pgdir_page:", hex(kmemory.pgdir_page));
+	page = alloc_page(GFP_HIGHMEM);
+	cr3 = page_to_phys(page);
+	current->mm->pgdir = (void *)phys_to_virt(cr3);
 
 	/*
 	 * insert one item in pgdir to map virtual page
 	 * table to VPT. One pde covers 1<<10 * 1<<12 = 4MB
 	 */
-	set_pde(kmemory.pgdir + pde_index(VPT), kmemory.cr3, PDE_P | PDE_W);
+	set_pde(current->mm->pgdir + pde_index(VPT), cr3, PDE_P | PDE_W);
 
-	/* map kernel memory to the start of 0xC0000000 */
-	page_map(kmemory.pgdir, KERNEL_VADDR_SHIFT, 0x0, 0x38000000, PTE_W);
+	/* map linear area */
+	kernel_map(KERNEL_VIRT_BASE, 0x0, highmem_end_pfn << PAGE_SHIFT, PTE_W);
 
-	kmemory.pgdir[0] = kmemory.pgdir[pde_index(KERNEL_VADDR_SHIFT)];
+	current->mm->pgdir[0] = current->mm->pgdir[pde_index(KERNEL_VIRT_BASE)];
 
-	enable_paging(kmemory.cr3);
+	enable_paging(cr3);
 
         gdt_init();
 
-	kmemory.pgdir[0] = 0;
+	current->mm->pgdir[0] = 0;
 
 	vmalloc_init();
 

@@ -4,7 +4,7 @@
 .text
 .global kern_entry
 kern_entry:
-	lgdt (__gdtesc - KERNEL_VADDR_SHIFT)
+	lgdt (__gdtesc - KERNEL_VIRT_BASE)
 	movl $KERNEL_DS, %eax
 	movw %ax, %ds
 	movw %ax, %es
@@ -32,11 +32,11 @@ bootstacktop:
 .align 4
 __gdt:
 	SEG_NULLASM
-	SEG_ASM(STA_X | STA_R, - KERNEL_VADDR_SHIFT, 0xFFFFFFFF)
-	SEG_ASM(STA_W, - KERNEL_VADDR_SHIFT, 0xFFFFFFFF)
+	SEG_ASM(STA_X | STA_R, - KERNEL_VIRT_BASE, 0xFFFFFFFF)
+	SEG_ASM(STA_W, - KERNEL_VIRT_BASE, 0xFFFFFFFF)
 __gdtesc:
 	.word 0x17  				# sizeof(gdt) - 1
-	.long (__gdt - KERNEL_VADDR_SHIFT)	# address gdt
+	.long (__gdt - KERNEL_VIRT_BASE)	# address gdt
 
 .text
 .globl __alltraps

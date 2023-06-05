@@ -58,7 +58,7 @@
 #define PAGE_SHIFT 12
 #define PAGE_SIZE (1 << PAGE_SHIFT)
 #define KERNEL_STACK_SIZE ((PAGE_SIZE) * 2)
-#define KERNEL_VADDR_SHIFT 0xC0000000
+#define KERNEL_VIRT_BASE 0xC0000000
 
 /* page item entry flags */
 #define PTE_P	(1 << 0)	/* present */
