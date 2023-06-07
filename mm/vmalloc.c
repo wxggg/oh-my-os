@@ -193,6 +193,8 @@ void vfree(void *addr)
 	vma = rb_node_value(node);
 	assert(vma);
 
+	kernel_unmap(vma->start, vma_length(vma));
+
 	for (i = 0; i < vma->nr_pages; i++)
 		free_pages(vma->pages[i]);
 

@@ -158,9 +158,14 @@ static void gdt_init(void)
 	asm volatile ("ljmp %0, $1f\n 1:\n" :: "i" (KERNEL_CS));
 }
 
-void kernel_map(unsigned long kva, unsigned long pa, size_t size, uint32_t flag)
+void kernel_map(unsigned long va, unsigned long pa, size_t size, uint32_t flag)
 {
-	return page_map(current->mm->pgdir, kva, pa, size, flag);
+	return page_map(current->mm->pgdir, va, pa, size, flag);
+}
+
+void kernel_unmap(unsigned long va, size_t size)
+{
+	return page_unmap(current->mm->pgdir, va, size);
 }
 
 void kernel_page_table_dump(unsigned long va, size_t size)

@@ -116,9 +116,11 @@ void memory_init(void);
 #define round_down_page(x)	round_down((uintptr_t)(x), PAGE_SIZE)
 
 void page_init(void);
+
+/* page table */
 void set_pde(unsigned long* pde, unsigned long pa, uint32_t flag);
-void set_pte(unsigned long* pte, unsigned long pa, uint32_t flag);
 void page_map(unsigned long *pgdir, unsigned long va, unsigned long pa, size_t size, uint32_t flag);
+void page_unmap(unsigned long *pgdir, unsigned long va, size_t size);
 void page_table_dump(unsigned long *pgdir, unsigned long va, size_t size);
 void enable_paging(unsigned long cr3);
 
@@ -146,4 +148,5 @@ void free_pages(struct page *page);
 #define alloc_page(gfp_mask) alloc_pages(gfp_mask, 0)
 
 void kernel_map(unsigned long kva, unsigned long pa, size_t size, uint32_t flag);
+void kernel_unmap(unsigned long va, size_t size);
 void kernel_page_table_dump(unsigned long va, size_t size);
