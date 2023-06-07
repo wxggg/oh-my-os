@@ -2,6 +2,10 @@
 
 #include <types.h>
 
+#ifndef asm
+#define asm __asm__
+#endif
+
 #define do_div(n, base)                                                        \
     ({                                                                         \
         unsigned long __upper, __low, __high, __mod, __base;                   \

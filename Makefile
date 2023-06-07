@@ -1,6 +1,3 @@
-PROJ	:= 3.1
-EMPTY	:=
-SPACE	:= $(EMPTY) $(EMPTY)
 SLASH	:= /
 
 V       := @
@@ -80,9 +77,8 @@ $(call add_files_cc,$(call listf_cc,$(LIBDIR)),libs,)
 KINCLUDE	+= 	kernel/
 
 KSRCDIR		+= 	kernel \
-				arch/x86 \
-				graphic \
-				mm \
+			mm \
+			graphic \
 
 KCFLAGS		+= $(addprefix -I,$(KINCLUDE))
 
