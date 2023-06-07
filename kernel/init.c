@@ -12,6 +12,12 @@
 
 int kern_init(void) __attribute__((noreturn));
 
+void reboot(void)
+{
+	pr_info("rebooting...");
+	outb(0x92, 0x3);
+}
+
 int kern_init(void)
 {
 	extern char edata[], end[];

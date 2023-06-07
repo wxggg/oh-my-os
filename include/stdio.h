@@ -29,6 +29,13 @@ int print_args(const char *end, ...);
 
 string *get_out_string(void);
 
+static inline char *ch(char c)
+{
+	string *s = get_out_string();
+	string_append_char(s, c);
+	return s->str;
+}
+
 static inline char *__dec(long val)
 {
 	string *s = get_out_string();

@@ -4,6 +4,7 @@
 #include <irq.h>
 #include <error.h>
 #include <debug.h>
+#include <keyboard.h>
 
 struct gate_desc {
 	unsigned offset_15_0 : 16;
@@ -93,5 +94,6 @@ void irq_init(void)
 	pic_init();
 	idt_init();
 	timer_init();
+	keyboard_init();
 	intr_enable();
 }

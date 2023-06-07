@@ -46,8 +46,6 @@ inline unsigned long tick()
 static void timer_irq_handler()
 {
 	ticks++;
-	if (ticks % TICK_NUM == 0)
-		pr_info("tick");
 }
 
 /**

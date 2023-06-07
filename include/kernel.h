@@ -7,3 +7,5 @@
 	((type *)(__mptr - offsetof(type, member))); })
 
 unsigned long tick();
+
+void reboot(void);
