@@ -5,6 +5,7 @@
 #include <kernel.h>
 #include <memory.h>
 #include <assert.h>
+#include <log2.h>
 
 static const char * __str_hex = "0123456789abcdef";
 
@@ -431,6 +432,13 @@ int to_hex(unsigned int val, char *buf, int len)
 	return i;
 }
 
+void string_init(string *s, char *buf, size_t size)
+{
+	s->str = buf;
+	s->length = 0;
+	s->capacity = size;
+}
+
 string *string_create(void)
 {
 	string *s;
@@ -464,8 +472,8 @@ static int string_try_expand(string *s, size_t size)
 		return 0;
 
 	/* need 1 more byte for end \0 */
-	size = get_slab_size(size + 1);
-	assert_notrace(size != PAGE_SIZE && s->capacity < size);
+	size = roundup_pow_of_two(size + 1);
+	assert(s->capacity < size);
 
 	str = kmalloc(size);
 	if (!str)

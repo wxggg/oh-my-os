@@ -9,7 +9,7 @@
 #include <error.h>
 #include <mm.h>
 
-#define VMA_DEBUG
+/* #define VMA_DEBUG */
 
 #define MAX_VMA_ORDER 20
 
@@ -42,11 +42,71 @@ static inline struct vm_area *vma_next(struct vm_area *vma)
 	return container_of(node, struct vm_area, node);
 }
 
+#ifdef VMA_DEBUG
+static void dump_free_vma_lists(void)
+{
+	struct vm_area *vma;
+	struct list_node *list, *node;
+	unsigned int i;
+
+	for (i = 0; i <= MAX_VMA_ORDER; i++) {
+		list = &free_vma_lists[i];
+
+		printk("order:", dec(i));
+
+		node = list->next;
+		while (node != list) {
+			vma = container_of(node, struct vm_area, free_node);
+			printk(" ", range(vma->start, vma->end));
+			node = node->next;
+			assert(node);
+		}
+
+		printk("\n");
+	}
+}
+
+static void dump_vma_list(void)
+{
+	struct vm_area *vma;
+	struct list_node *node;
+
+	printk("vma list:");
+
+	node = vma_list.next;
+
+	while (node != &vma_list) {
+		vma = container_of(node, struct vm_area, node);
+		printk(" ", vma->free ? "free:": "nonfree:", range(vma->start, vma->end));
+		node = node->next;
+	}
+
+	printk("\n");
+}
+#endif
+
+static inline struct vm_area *find_vma(unsigned long va)
+{
+	struct rb_node *node;
+	struct vm_area *vma;
+
+	assert(va >= VMALLOC_START && va < VMALLOC_END,
+	       "invalid addr:", hex(va));
+
+	node = rb_tree_search(vma_tree, va);
+	assert(node);
+
+	vma = rb_node_value(node);
+	assert(vma);
+
+	return vma;
+}
+
 static void free_vma(struct vm_area *vma)
 {
 	struct vm_area *prev, *next;
 
-	assert(vma);
+	assert(vma && vma->start >= VMALLOC_START && vma->end < VMALLOC_END);
 
 	rb_tree_remove(vma_tree, vma->start);
 
@@ -61,7 +121,7 @@ static void free_vma(struct vm_area *vma)
 	}
 
 	while ((next = vma_next(vma)) && next->free) {
-		assert((next->end) == vma->start, "vma is not adjacent, ",
+		assert((vma->end) == next->start, "vma is not adjacent, ",
 			range(next->start, next->end), ", ", range(vma->start, vma->end));
 
 		vma->end = next->end;
@@ -87,7 +147,7 @@ struct vm_area *alloc_vma(unsigned long len)
 			node = list_next(&free_vma_lists[i]);
 			vma = container_of(node, struct vm_area, free_node);
 
-			assert((vma->end - vma->start) >= len);
+			assert(vma->free && (vma->end - vma->start) >= len);
 
 			if (vma_length(vma) >= len + PAGE_SIZE) {
 				vma_buddy = kmalloc(sizeof(*vma_buddy));
@@ -97,6 +157,7 @@ struct vm_area *alloc_vma(unsigned long len)
 				vma_buddy->end = vma->end;
 				vma->end = vma->start + len;
 				vma_buddy->start = vma->end;
+				vma_buddy->free = true;
 
 				buddy_order = ilog2(vma_length(vma_buddy) >> PAGE_SHIFT);
 				assert(buddy_order <= MAX_VMA_ORDER);
@@ -105,6 +166,7 @@ struct vm_area *alloc_vma(unsigned long len)
 				list_insert(&free_vma_lists[buddy_order], &vma_buddy->free_node);
 			}
 
+			list_remove(&vma->free_node);
 			vma->free = false;
 			rb_tree_insert(vma_tree, vma->start, vma->end - 1, vma);
 			return vma;
@@ -114,11 +176,54 @@ struct vm_area *alloc_vma(unsigned long len)
 	return NULL;
 }
 
+static int map_vm_area(struct vm_area *vma, struct page **pages,
+		       unsigned long nr_pages)
+{
+	unsigned long i, va;
+
+	va = vma->start;
+	for (i = 0; i < nr_pages; i++) {
+		kernel_map(va, page_to_phys(pages[i]), PAGE_SIZE, PTE_W);
+		va += PAGE_SIZE;
+	}
+
+	vma->pages = pages;
+	vma->nr_pages = nr_pages;
+	return 0;
+}
+
+void *vmap(struct page **pages, unsigned int nr_pages)
+{
+	struct vm_area *vma;
+
+	vma = alloc_vma(nr_pages * PAGE_SIZE);
+	if (!vma)
+		return NULL;
+
+	map_vm_area(vma, pages, nr_pages);
+
+	return (void *)vma->start;
+}
+
+void vunmap(void *addr)
+{
+	struct vm_area *vma;
+	unsigned long va = (unsigned long)addr;
+
+	vma = find_vma(va);
+	if (!vma)
+		return;
+
+	kernel_unmap(vma->start, vma_length(vma));
+	free_vma(vma);
+}
+
 void *__vmalloc(gfp_t gfp_mask, size_t size)
 {
 	struct vm_area *vma;
 	unsigned long i;
-	unsigned vm_start;
+	struct page **pages;
+	unsigned long nr_pages;
 
 	warn_on(size < PAGE_SIZE, " allocate size=", dec(size), " < PAGE_SIZE");
 
@@ -130,25 +235,22 @@ void *__vmalloc(gfp_t gfp_mask, size_t size)
 		return NULL;
 	}
 
-	vma->nr_pages = size >> PAGE_SHIFT;
-
-	vma->pages = kmalloc(sizeof(vma->pages) * vma->nr_pages);
-	if (!vma->pages)
+	nr_pages = size >> PAGE_SHIFT;
+	pages = kmalloc(sizeof(pages) * nr_pages);
+	if (!pages) {
+		pr_err("alloc pages failed");
 		goto err_free_vma;
+	}
 
-	for (i = 0; i < vma->nr_pages; i++) {
-		vma->pages[i] = alloc_page(gfp_mask);
-		if (!vma->pages[i]) {
+	for (i = 0; i < nr_pages; i++) {
+		pages[i] = alloc_page(gfp_mask);
+		if (!pages[i]) {
 			pr_err("alloc_page failed");
 			goto err_free_pages;
 		}
 	}
 
-	vm_start = vma->start;
-	for (i = 0; i < vma->nr_pages; i++) {
-		kernel_map(vm_start, page_to_phys(vma->pages[i]), PAGE_SIZE, PTE_W);
-		vm_start += PAGE_SIZE;
-	}
+	map_vm_area(vma, pages, nr_pages);
 
 	return (void *)vma->start;
 
@@ -177,21 +279,15 @@ void *vmalloc(size_t size)
 void vfree(void *addr)
 {
 	struct vm_area *vma;
-	struct rb_node *node;
 	unsigned long vaddr = (uintptr_t)addr;
 	unsigned int i;
 
 	if (!addr)
 		return;
 
-	assert(vaddr >= VMALLOC_START && vaddr < VMALLOC_END,
-	       "invalid addr:", hex(addr));
-
-	node = rb_tree_search(vma_tree, vaddr);
-	assert(node);
-
-	vma = rb_node_value(node);
-	assert(vma);
+	vma = find_vma(vaddr);
+	if (!vma)
+		return;
 
 	kernel_unmap(vma->start, vma_length(vma));
 
@@ -199,9 +295,6 @@ void vfree(void *addr)
 		free_pages(vma->pages[i]);
 
 	kfree(vma->pages);
-	vma->pages = NULL;
-	vma->nr_pages = 0;
-
 	free_vma(vma);
 }
 
@@ -228,7 +321,7 @@ int vmalloc_init(void)
 	list_insert(&free_vma_lists[order], &vma->free_node);
 
 	vma_tree = rb_tree_create();
-	assert_notrace(vma_tree);
+	assert(vma_tree);
 
 	return 0;
 }

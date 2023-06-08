@@ -1,5 +1,11 @@
 #pragma once
 
+#define BIT(i) (1 << i)
+
+#define set_bit(x, bit) (x |= bit)
+#define clear_bit(x, bit) (x &= ~bit)
+#define is_bit_set(x, bit) (x & bit)
+
 static inline int fls(unsigned int x)
 {
 	int r = 0;

@@ -183,7 +183,7 @@ void memory_init(void)
 	scan_memory_slot();
 
 	current->mm = kmalloc(sizeof(*current->mm));
-	assert_notrace(current->mm);
+	assert(current->mm);
 
 	page = alloc_page(GFP_HIGHMEM);
 	cr3 = page_to_phys(page);
@@ -207,6 +207,8 @@ void memory_init(void)
 	current->mm->pgdir[0] = 0;
 
 	vmalloc_init();
+
+	kmalloc_init();
 
 	pr_info("memory init success");
 }

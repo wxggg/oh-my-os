@@ -4,6 +4,8 @@
 #include <types.h>
 #include <list.h>
 #include <stdlib.h>
+#include <slab.h>
+#include <bitops.h>
 
 /**
  * physical memory layout
@@ -84,7 +86,13 @@ struct page {
 	unsigned long flags;
 	unsigned long order;
 	struct list_node node;
-	bool free;
+
+	/* slab allocator */
+	void *s_mem;
+	unsigned char *freelist;
+	unsigned short active;
+	unsigned short total;
+	struct kmem_cache *slab_cache;
 };
 
 #define in_range(x, start, length) \
@@ -98,19 +106,16 @@ extern unsigned long vmalloc_start_pfn, vmalloc_end_pfn;
 void memory_init(void);
 
 /* page flag */
-#define PAGE_VALID	(1 << 0)
-#define PAGE_HIGHMEM	(1 << 1)
+#define PAGE_VALID	BIT(0)
+#define PAGE_FREE	BIT(1)
+#define PAGE_HIGHMEM	BIT(2)
+#define PAGE_SLAB	BIT(3)
 
 #define pde_index(x) (((x) >> 22) & 0x3ff)
 #define pte_index(x) (((x) >> 12) & 0x3ff)
 
 #define page_base(x) ((x) & ~0xfff)
 #define page_offset(x) ((x) & 0xfff)
-
-#define page_set_valid(page) ((page)->flags |= PAGE_VALID)
-#define page_is_valid(page) ((page)->flags & PAGE_VALID)
-#define page_set_highmem(page) ((page)->flags |= PAGE_HIGHMEM)
-#define page_is_highmem(page) ((page)->flags & PAGE_HIGHMEM)
 
 #define round_up_page(x)	round_up((uintptr_t)(x), PAGE_SIZE)
 #define round_down_page(x)	round_down((uintptr_t)(x), PAGE_SIZE)
@@ -123,6 +128,7 @@ void page_map(unsigned long *pgdir, unsigned long va, unsigned long pa, size_t s
 void page_unmap(unsigned long *pgdir, unsigned long va, size_t size);
 void page_table_dump(unsigned long *pgdir, unsigned long va, size_t size);
 void enable_paging(unsigned long cr3);
+void *page_address(struct page *page);
 
 #define virt_to_phys(x) ((uintptr_t)(x) - KERNEL_VIRT_BASE)
 #define phys_to_virt(x) ((uintptr_t)(x) + KERNEL_VIRT_BASE)
@@ -139,6 +145,16 @@ static inline unsigned long page_to_phys(struct page *page)
 static inline struct page *phys_to_page(unsigned long phys)
 {
 	return pfn_to_page(phys_to_pfn(phys));
+}
+
+static inline struct page *virt_to_page(unsigned long virt)
+{
+	return phys_to_page(virt_to_phys(virt));
+}
+
+static inline unsigned long page_to_virt(struct page *page)
+{
+	return phys_to_virt(page_to_phys(page));
 }
 
 void add_free_pages(unsigned long start_pfn, unsigned long end_pfn);

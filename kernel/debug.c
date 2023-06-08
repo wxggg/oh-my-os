@@ -49,6 +49,10 @@ extern const char __STABSTR_END__[];        // end of string table
 static struct rb_tree *g_stab_so_tree;
 static struct rb_tree *g_stab_fun_tree;
 
+static string debug_s;
+static char g_debug_buf[128];
+static bool b_init_debug = false;
+
 void backtrace(void)
 {
 	unsigned long *ebp = (unsigned long *)read_ebp();
@@ -57,16 +61,20 @@ void backtrace(void)
 	const struct stab *stab;
 	struct rb_node *node;
 	const char *file = NULL, *func = NULL;
-	string *s = string_create();
 	char *split;
 	int i;
+
+	if (!b_init_debug)
+		return;
 
 	pr_info("Call Trace:");
 	for (i = 0; ebp && i < 20; i ++) {
 		node = rb_tree_search(g_stab_so_tree, eip);
 		if (node) {
 			stab = rb_node_value(node);
-			assert_notrace(stab);
+			if (!stab)
+				return;
+
 			file = str + stab->n_strx;
 		} else {
 			file = "<unknown>";
@@ -75,18 +83,19 @@ void backtrace(void)
 		node = rb_tree_search(g_stab_fun_tree, eip);
 		if (node) {
 			stab = rb_node_value(node);
-			assert_notrace(stab);
+			if (!stab)
+				return;
 
 			func = str + stab->n_strx;
 
-			s->length = 0;
+			debug_s.length = 0;
 			split = strfind(func, ':');
 			if (split)
-				string_append_strn(s, func, split - func);
+				string_append_strn(&debug_s, func, split - func);
 			else
-				string_append_str(s, func);
+				string_append_str(&debug_s, func);
 
-			pr_info("\t", s->str,
+			pr_info("\t", debug_s.str,
 				"+", hex(eip - stab->n_value), "/",
 				hex(rb_node_key_end(node) - rb_node_key_start(node)),
 				"\t[", file, "]");
@@ -99,7 +108,6 @@ void backtrace(void)
 	}
 
 	pr_info("---[ end trace ]---");
-	string_destroy(s);
 }
 
 void debug_init(void)
@@ -136,4 +144,8 @@ void debug_init(void)
 	if (prev_fun_stab)
 		rb_tree_insert(g_stab_fun_tree, prev_fun_stab->n_value,
 				0xffffffff, (void *)prev_fun_stab);
+
+	string_init(&debug_s, g_debug_buf, 128);
+	b_init_debug = true;
+	pr_info("debug init success");
 }

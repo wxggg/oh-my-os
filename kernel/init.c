@@ -23,18 +23,17 @@ int kern_init(void)
 	extern char edata[], end[];
 	memset(edata, 0, end - edata);
 
-	printk("\n");
-	pr_info("loading...");
+	printk("\nloading...\n");
 
 	kmalloc_early_init();
+
+	debug_init();
 
 	serial_init();
 
 	memory_init();
 
 	irq_init();
-
-	debug_init();
 
 	graphic_init();
 

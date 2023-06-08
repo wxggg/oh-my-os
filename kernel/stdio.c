@@ -5,6 +5,7 @@
 #define STDIO_MAX_ARGS 	32
 
 static string g_out_string[STDIO_MAX_ARGS];
+static char g_out_buf[STDIO_MAX_ARGS][128];
 static int index = 0;
 
 const char line_end[1];
@@ -14,7 +15,7 @@ string *get_out_string(void)
 	string *s;
 	index = (index + 1) % STDIO_MAX_ARGS;
 	s = &g_out_string[index];
-	s->length = 0;
+	string_init(s, &g_out_buf[index][0], 128);
 	return s;
 }
 

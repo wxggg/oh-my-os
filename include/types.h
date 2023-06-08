@@ -1,4 +1,5 @@
 #pragma once
+#include <error.h>
 
 #ifndef NULL
 #define NULL ((void *)0)

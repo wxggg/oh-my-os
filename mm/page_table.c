@@ -2,6 +2,9 @@
 #include <x86.h>
 #include <stdio.h>
 #include <memory.h>
+#include <vmalloc.h>
+
+/* #define PAGE_TABLE_DEBUG */
 
 static inline void tlb_invalidate(unsigned long *pgdir, unsigned long va)
 {
@@ -45,7 +48,9 @@ void page_map(unsigned long *pgdir, unsigned long va, unsigned long pa, size_t s
 	pa = round_down_page(pa);
 	end = round_up_page(va + size);
 
+#ifdef PAGE_TABLE_DEBUG
 	pr_debug("map: <", hex(va), "->", hex(pa), "> size:", hex(size));
+#endif
 
 	while (va < end) {
 		pte = get_pte(pgdir, va);
@@ -65,7 +70,9 @@ void page_unmap(unsigned long *pgdir, unsigned long va, size_t size)
 	va = round_down_page(va);
 	end = round_up_page(va + size);
 
+#ifdef PAGE_TABLE_DEBUG
 	pr_debug("unmap: ", range(va, end));
+#endif
 
 	while (va < end) {
 		pte = get_pte(pgdir, va);
@@ -116,3 +123,10 @@ void enable_paging(unsigned long cr3)
 	lcr0(cr0);
 }
 
+void *page_address(struct page *page)
+{
+	if (is_bit_set(page->flags, PAGE_HIGHMEM))
+		return (void *)phys_to_virt(page_to_phys(page));
+
+	return vmap(&page, 1);
+}

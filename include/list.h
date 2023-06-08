@@ -50,4 +50,15 @@ static inline struct list_node *list_tail(struct list_node *head)
 	return head->prev;
 }
 
+static inline unsigned long list_size(struct list_node *head)
+{
+	struct list_node *node = head->next;
+	unsigned long size = 0;
+
+	for (node = head->next; node != head; node = node->next)
+		size++;
+
+	return size;
+}
+
 #endif

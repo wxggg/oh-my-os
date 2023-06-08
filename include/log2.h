@@ -5,6 +5,9 @@
 
 static inline unsigned long ilog2_roundup(unsigned long n)
 {
+	if (n == 0)
+		return 0;
+
 	return fls(n - 1);
 }
 

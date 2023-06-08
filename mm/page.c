@@ -26,12 +26,22 @@ static struct list_node free_lists[MAX_ORDER + 1];
 #define dump_page(page) \
 	do { \
 		pr_debug("page:", hex(page), " index:", dec(page_to_pfn(page)), \
-			 " order:", dec(page->order), " free:", dec(page->free)); \
+			 " order:", dec(page->order), " flags:", hex(page->flags)); \
 	} while (0);
+
+static void dump_free_list(void)
+{
+	unsigned int i;
+
+	for (i = 0; i <= MAX_ORDER; i++) {
+		pr_info("highmem-", dec(i), " ", dec(list_size(&highmem_free_lists[i])),
+			"\tvmalloc-", dec(i), " ", dec(list_size(&free_lists[i])));
+	}
+}
+
 #else
 #define dump_page(page)
 #endif
-
 
 unsigned long page_to_pfn(struct page *page)
 {
@@ -50,10 +60,10 @@ static inline struct page *page_buddy(struct page *page)
 
 static inline void free_page(struct page *page, unsigned int order)
 {
-	page->free = true;
+	set_bit(page->flags, PAGE_FREE);
 	page->order = order;
 
-	if (page_is_highmem(page))
+	if (is_bit_set(page->flags, PAGE_HIGHMEM))
 		list_insert(&highmem_free_lists[order], &page->node);
 	else
 		list_insert(&free_lists[order], &page->node);
@@ -67,7 +77,7 @@ static inline void init_free_pages(struct page *start_page, unsigned long nr_pag
 	for (count = 0; count < nr_pages; count += 1 << order)
 		free_page(start_page + count, order);
 
-	assert_notrace(count == nr_pages, "invalid nr_pages:", dec(nr_pages),
+	assert(count == nr_pages, "invalid nr_pages:", dec(nr_pages),
 		       ", order:", dec(order));
 }
 
@@ -77,7 +87,7 @@ void add_free_pages(unsigned long start_pfn, unsigned long end_pfn)
 	unsigned long split_start, split_end, pfn;
 	bool highmem;
 
-	assert_notrace(start_pfn <= end_pfn, " invalid pfn range ",
+	assert(start_pfn <= end_pfn, " invalid pfn range ",
 		       range(start_pfn, end_pfn));
 
 	if (end_pfn <= highmem_end_pfn) {
@@ -95,9 +105,9 @@ void add_free_pages(unsigned long start_pfn, unsigned long end_pfn)
 
 	for (pfn = start_pfn; pfn < end_pfn; pfn++) {
 		page = pfn_to_page(pfn);
-		page_set_valid(page);
+		set_bit(page->flags, PAGE_VALID);
 		if (highmem)
-			page_set_highmem(page);
+			set_bit(page->flags, PAGE_HIGHMEM);
 	}
 
 	/* split <start, end> to three parts */
@@ -142,7 +152,7 @@ struct page *alloc_pages(gfp_t gfp_mask, unsigned int order)
 
 	for (i = order; i <= MAX_ORDER; i++)
 	{
-		list = get_free_list(gfp_mask, order);
+		list = get_free_list(gfp_mask, i);
 		if (!list_empty(list))
 		{
 			node = list_next(list);
@@ -150,17 +160,18 @@ struct page *alloc_pages(gfp_t gfp_mask, unsigned int order)
 			page = container_of(node, struct page, node);
 			dump_page(page);
 
-			assert(i == page->order);
+			assert(i == page->order, "invalid order ", pair(i, page->order));
 
 			while (page->order > order)
 			{
 				page->order--;
 				buddy = page_buddy(page);
-				assert(page_is_valid(buddy), "buddy-", dec(page_to_pfn(buddy)), " is not available");
-				free_page(buddy, buddy->order);
+				assert(is_bit_set(buddy->flags, PAGE_VALID),
+				       "buddy-", dec(page_to_pfn(buddy)), " is not available");
+				free_page(buddy, page->order);
 			}
 
-			page->free = false;
+			clear_bit(page->flags, PAGE_FREE);
 			dump_page(page);
 			return page;
 		}
@@ -177,9 +188,11 @@ void free_pages(struct page *page)
 	{
 		buddy = page_buddy(page);
 
-		if (!page_is_valid(buddy) || !page->free)
+		if (!is_bit_set(buddy->flags, PAGE_VALID) ||
+		    !is_bit_set(buddy->flags, PAGE_FREE))
 			break;
 
+		list_remove(&buddy->node);
 		if (buddy < page)
 			page = buddy;
 
@@ -187,6 +200,7 @@ void free_pages(struct page *page)
 	}
 
 	free_page(page, page->order);
+	dump_page(page);
 }
 
 void page_init(void)
