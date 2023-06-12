@@ -78,5 +78,4 @@
 
 void keyboard_init(void);
 void keyboard_intr(void);
-int keyboard_getc(void);
 

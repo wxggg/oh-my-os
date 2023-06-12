@@ -231,7 +231,7 @@ void *__vmalloc(gfp_t gfp_mask, size_t size)
 
 	vma = alloc_vma(size);
 	if (!vma) {
-		pr_err("alloc_vma failed");
+		pr_err("alloc_vma failed, size=", hex(size));
 		return NULL;
 	}
 
@@ -309,8 +309,7 @@ int vmalloc_init(void)
 	list_init(&vma_list);
 
 	vma = kmalloc(sizeof(*vma));
-	if (!vma)
-		return -ENOMEM;
+	assert(vma);
 
 	vma->start = VMALLOC_START;
 	vma->end = VMALLOC_END;

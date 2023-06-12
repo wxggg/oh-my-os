@@ -1,6 +1,7 @@
 #include <stdarg.h>
 #include <stdio.h>
 #include <string.h>
+#include <queue.h>
 
 #define STDIO_MAX_ARGS 	32
 
@@ -9,6 +10,8 @@ static char g_out_buf[STDIO_MAX_ARGS][128];
 static int index = 0;
 
 const char line_end[1];
+
+queue *stdio_que;
 
 string *get_out_string(void)
 {
@@ -57,4 +60,41 @@ int print_args(const char *end, ...)
 	va_end(args);
 
 	return ret;
+}
+
+char readchar(void)
+{
+	while (1) {
+		if (serial_received())
+			return serial_getc();
+
+		if (!queue_empty(stdio_que))
+			return dequeue(stdio_que, char);
+
+		halt();
+	}
+}
+
+void readline(string *s)
+{
+	char c;
+	s->length = 0;
+
+	printk("~/oh-my-os <main*> # ");
+
+	while (1) {
+		c = readchar();
+		printk(ch(c));
+		if (c == '\n')
+			return;
+
+		string_append_char(s, c);
+	}
+}
+
+void stdio_init(void)
+{
+	stdio_que = queue_create(char);
+
+	serial_init();
 }

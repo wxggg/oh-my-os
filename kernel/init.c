@@ -29,9 +29,9 @@ int kern_init(void)
 
 	debug_init();
 
-	serial_init();
-
 	memory_init();
+
+	stdio_init();
 
 	irq_init();
 
@@ -39,7 +39,14 @@ int kern_init(void)
 
 	pr_info("kernel init success!");
 
+	vmalloc(1024 * PAGE_SIZE);
+
+	string *s = string_create();
 	while (1) {
-		halt();
+		readline(s);
+
+		if (!strcmp(s->str, "backtrace")) {
+			backtrace();
+		}
 	}
 }

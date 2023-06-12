@@ -1,5 +1,7 @@
 #pragma once
 
+#include <x86.h>
+
 #define offsetof __builtin_offsetof
 
 #define container_of(ptr, type, member) ({			\

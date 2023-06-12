@@ -3,14 +3,24 @@
 #include <types.h>
 #include <string.h>
 #include <kernel.h>
+#include <queue.h>
 
 #define PR_DEBUG
 
+int serial_received();
 void serial_init(void);
 void serial_putc(int ch);
+char serial_getc(void);
 
 void putchar(int ch);
 int puts(const char *str);
+
+extern queue *stdio_que;
+
+char readchar(void);
+void readline(string *s);
+
+void stdio_init(void);
 
 extern const char line_end[1];
 int print_args(const char *end, ...);

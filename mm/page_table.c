@@ -95,7 +95,7 @@ void page_table_dump(unsigned long *pgdir, unsigned long va, size_t size)
 			continue;
 
 		va_base = i * 1024 * PAGE_SIZE;
-		if (va_base < va || va_base > (va + size))
+		if (va_base < va || va_base >= (va + size))
 			continue;
 
 		pt = (void *)phys_to_virt(page_base(pde));

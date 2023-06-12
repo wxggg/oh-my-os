@@ -11,7 +11,7 @@ struct block {
 };
 
 #define MIN_SIZE 8
-#define MAX_ORDER 10
+#define MAX_ORDER 12
 #define MAX_SIZE (MIN_SIZE << MAX_ORDER)
 
 static unsigned char block_buffer[MAX_SIZE];

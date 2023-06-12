@@ -4,6 +4,7 @@
 #include <stdio.h>
 #include <irq.h>
 #include <kernel.h>
+#include <queue.h>
 
 #define NO 0
 #define SHIFT (1 << 0)
@@ -171,7 +172,7 @@ static void keyboard_read_all_buffer(void)
 
 	while ((c = keyboard_device_getc()) != -1) {
 		if (c != 0)
-			printk(ch(c));
+			enqueue(stdio_que, char, c);
 	}
 }
 
