@@ -48,5 +48,9 @@ int kern_init(void)
 		if (!strcmp(s->str, "backtrace")) {
 			backtrace();
 		}
+
+		if (!strcmp(s->str, "gpu_dump")) {
+			gpu_dump();
+		}
 	}
 }
