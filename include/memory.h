@@ -17,13 +17,13 @@
  * +------------------------+ ram end
  * |                        |
  * |                        |
- * |      vmalloc           |
+ * |      high mem          |
  * |                        |
  * |                        |
  * +------------------------+-----------+ 0x38000000 (896MB)
  * |                        |           |
  * |                        |           |
- * |      high mem          |  linear   |
+ * |      linear            |  linear   |
  * |                        |           |
  * |                        |           |
  * +------------------------+           + high mem start
@@ -39,7 +39,7 @@
  * |       ioremap address  | 128MB
  * +------------------------+ -----------+ 0xf8000000 (3GB + 896MB)
  * |                        |            |
- * |       high mem         |            |
+ * |       linear           |            |
  * |                        |   linear   |
  * +------------------------+            + high mem start
  * |                        |            | kernel end
@@ -55,23 +55,24 @@
  * +------------------------+ NULL
  */
 
-#define PHYS_HIGHMEM_END 0x38000000
-#define PHYS_VMALLOC_START 0x38000000
-#define PHYS_VMALLOC_END 0xf8000000
+#define PHYS_LINEAR_END 0x38000000
+#define PHYS_HIGHMEM_START 0x38000000
+#define PHYS_HIGHMEM_END 0xf8000000
 #define PHYS_IOMEM_START 0xf8000000
 
-#define LINEAR_MAP_SIZE (PHYS_HIGHMEM_END)
+#define LINEAR_MAP_SIZE (PHYS_LINEAR_END)
 
 #define VMALLOC_START PAGE_SIZE
 #define VMALLOC_END KERNEL_VIRT_BASE
-#define VIRT_HIGHMEM_END (KERNEL_VIRT_BASE + LINEAR_MAP_SIZE)
-#define VIRT_IOREMAP_BASE VIRT_HIGHMEM_END
+#define VIRT_LINEAR_END (KERNEL_VIRT_BASE + LINEAR_MAP_SIZE)
+#define VIRT_IOREMAP_BASE VIRT_LINEAR_END
 
 typedef unsigned int gfp_t;
 
 #define GFP_HIGHMEM 0x01u
-#define GFP_NORMAL 0x02u
+#define GFP_LINEAR 0x02u
 
+#define GFP_NORMAL GFP_LINEAR
 #define GFP_KERNEL GFP_NORMAL
 
 /*
@@ -166,3 +167,5 @@ void free_pages(struct page *page);
 void kernel_map(unsigned long kva, unsigned long pa, size_t size, uint32_t flag);
 void kernel_unmap(unsigned long va, size_t size);
 void kernel_page_table_dump(unsigned long va, size_t size);
+
+void page_dump(void);

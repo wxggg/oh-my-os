@@ -3,6 +3,7 @@
 #include <kernel.h>
 #include <assert.h>
 #include <log2.h>
+#include <stdio.h>
 
 struct block {
 	unsigned int order;
@@ -18,9 +19,9 @@ static unsigned char block_buffer[MAX_SIZE];
 static struct block blocks[1 << MAX_ORDER];
 static struct list_node free_lists[MAX_ORDER + 1];
 
-#define KMEM_CACHE_MAX_SIZE  (PAGE_SIZE / 2)
-#define KMEM_CACHE_MAX_ORDER (KMEM_CACHE_MAX_SIZE / MIN_SIZE)
-static struct kmem_cache kmalloc_cache[KMEM_CACHE_MAX_ORDER];
+#define KMEM_CACHE_MAX_ORDER 7
+#define KMEM_CACHE_MAX_SIZE  (MIN_SIZE << KMEM_CACHE_MAX_ORDER)
+static struct kmem_cache kmalloc_cache[KMEM_CACHE_MAX_ORDER + 1];
 static bool init_kmem_cache = false;
 
 static inline bool is_early_block_addr(unsigned long addr)
@@ -47,6 +48,20 @@ static inline unsigned long index_to_addr(unsigned long index)
 static inline unsigned long addr_to_index(unsigned long addr)
 {
 	return (addr - (unsigned long)block_buffer) / MIN_SIZE;
+}
+
+static void dump_kmalloc_early(void)
+{
+	u32 i, count;
+
+	pr_info("dump kmalloc early: block_buffer:",
+		range(block_buffer, block_buffer + MAX_SIZE));
+
+	for (i = 0; i <= MAX_ORDER; i++) {
+		count = list_size(&free_lists[i]);
+		if (count > 0)
+			pr_info("\tkmalloc_early-", dec(MIN_SIZE << i), ": ", dec(count));
+	}
 }
 
 static struct block *alloc_blocks(unsigned int order)
@@ -140,6 +155,28 @@ void kmalloc_early_init(void)
 	pr_info("kmalloc early init success");
 }
 
+static void dump_kmalloc(void)
+{
+	unsigned int i;
+	struct kmem_cache *kcache;
+
+	pr_info("dump kmalloc: MAX_SIZE=", dec(KMEM_CACHE_MAX_SIZE),
+		", MAX_ORDER=", dec(KMEM_CACHE_MAX_ORDER));
+
+	for (i = 0; i <= KMEM_CACHE_MAX_ORDER; i++) {
+		kcache = &kmalloc_cache[i];
+
+		if (list_empty(&kcache->slabs_full) &&
+		    list_empty(&kcache->slabs_partial))
+			continue;
+
+		pr_info("\tkmalloc-", dec(kcache->size), ": slabs_full=",
+			dec(list_size(&kcache->slabs_full)),
+			", slabs_partial=",
+			dec(list_size(&kcache->slabs_partial)));
+	}
+}
+
 void *kmalloc(size_t size)
 {
 	unsigned int order;
@@ -155,7 +192,7 @@ void *kmalloc(size_t size)
 	}
 
 	order = ilog2_roundup(round_up_page(size) / PAGE_SIZE);
-	page = alloc_pages(GFP_HIGHMEM, order);
+	page = alloc_pages(GFP_NORMAL, order);
 	if (!page)
 		return NULL;
 
@@ -185,9 +222,14 @@ void kmalloc_init(void)
 {
 	unsigned int i;
 
-	for (i = 0; i < KMEM_CACHE_MAX_ORDER; i++)
+	for (i = 0; i <= KMEM_CACHE_MAX_ORDER; i++)
 		kmem_cache_create(&kmalloc_cache[i], MIN_SIZE << i);
 
 	init_kmem_cache = true;
 }
 
+void kmalloc_dump(void)
+{
+	dump_kmalloc_early();
+	dump_kmalloc();
+}

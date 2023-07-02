@@ -69,12 +69,12 @@ void irq_handler(struct trapframe *tf)
 		case IRQ_PGFLT:
 			pr_err("page fault, unable to access address:", hex(rcr2()));
 			backtrace();
-			while (1) {}
+			monitor();
 			break;
 		default:
 			pr_err("trap: unknown irq ", dec(tf->irq));
 			backtrace();
-			while (1) {}
+			monitor();
 			break;
 	}
 }

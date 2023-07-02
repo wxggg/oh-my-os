@@ -55,8 +55,8 @@ static struct pseudodesc gdt_desc = {
 #define VPT 0xfac00000
 
 unsigned long kernel_start_pfn, kernel_end_pfn;
+unsigned long linear_start_pfn, linear_end_pfn;
 unsigned long highmem_start_pfn, highmem_end_pfn;
-unsigned long vmalloc_start_pfn, vmalloc_end_pfn;
 
 static const char *e820_type_str(unsigned int type)
 {
@@ -100,16 +100,25 @@ static void scan_memory_slot(void)
 
 	map = &e820->map[index];
 
-	highmem_start_pfn = kernel_end_pfn;
 	free_end_pfn = phys_to_pfn(map->addr + map->size);
 
-	if (free_end_pfn <= phys_to_pfn(PHYS_HIGHMEM_END)) {
-		highmem_end_pfn = free_end_pfn;
+	linear_start_pfn = kernel_end_pfn;
+
+	highmem_start_pfn = phys_to_pfn(PHYS_HIGHMEM_START);
+
+	if (free_end_pfn <= highmem_start_pfn) {
+		highmem_end_pfn = highmem_start_pfn;
+		linear_end_pfn = free_end_pfn;
 	} else {
-		highmem_end_pfn = phys_to_pfn(PHYS_HIGHMEM_END);
+		highmem_end_pfn = free_end_pfn;
+		linear_end_pfn = highmem_start_pfn;
 	}
 
-	add_free_pages(highmem_start_pfn, free_end_pfn);
+	pr_info("kernel pfn range: ", range(kernel_start_pfn, kernel_end_pfn),
+		", linear pfn range: ", range(kernel_end_pfn, highmem_start_pfn),
+		", highmem pfn range: ", range(highmem_start_pfn, highmem_end_pfn));
+
+	add_free_pages(kernel_end_pfn, free_end_pfn);
 
 	/* memory after kernel should be added to memory manger */
 	for (i = index + 1; i < e820->n; i++) {
@@ -185,7 +194,7 @@ void memory_init(void)
 	current->mm = kmalloc(sizeof(*current->mm));
 	assert(current->mm);
 
-	page = alloc_page(GFP_HIGHMEM);
+	page = alloc_page(GFP_NORMAL);
 	cr3 = page_to_phys(page);
 	current->mm->pgdir = (void *)phys_to_virt(cr3);
 
@@ -196,7 +205,7 @@ void memory_init(void)
 	set_pde(current->mm->pgdir + pde_index(VPT), cr3, PDE_P | PDE_W);
 
 	/* map linear area */
-	kernel_map(KERNEL_VIRT_BASE, 0x0, highmem_end_pfn << PAGE_SHIFT, PTE_W);
+	kernel_map(KERNEL_VIRT_BASE, 0x0, linear_end_pfn << PAGE_SHIFT, PTE_W);
 
 	current->mm->pgdir[0] = current->mm->pgdir[pde_index(KERNEL_VIRT_BASE)];
 

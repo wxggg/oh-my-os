@@ -18,6 +18,37 @@ void reboot(void)
 	outb(0x92, 0x3);
 }
 
+void monitor(void)
+{
+	string *s = string_create();
+	while (1) {
+		readline(s);
+
+		if (!s->str)
+			continue;
+
+		if (!strcmp(s->str, "backtrace")) {
+			backtrace();
+		}
+
+		if (!strcmp(s->str, "gpu_dump")) {
+			gpu_dump();
+		}
+
+		if (!strcmp(s->str, "vma_dump")) {
+			vma_dump();
+		}
+
+		if (!strcmp(s->str, "kmalloc_dump")) {
+			kmalloc_dump();
+		}
+
+		if (!strcmp(s->str, "page_dump")) {
+			page_dump();
+		}
+	}
+}
+
 int kern_init(void)
 {
 	extern char edata[], end[];
@@ -39,18 +70,7 @@ int kern_init(void)
 
 	pr_info("kernel init success!");
 
-	vmalloc(1024 * PAGE_SIZE);
-
-	string *s = string_create();
 	while (1) {
-		readline(s);
-
-		if (!strcmp(s->str, "backtrace")) {
-			backtrace();
-		}
-
-		if (!strcmp(s->str, "gpu_dump")) {
-			gpu_dump();
-		}
+		monitor();
 	}
 }

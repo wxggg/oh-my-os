@@ -9,8 +9,6 @@
 #include <error.h>
 #include <mm.h>
 
-/* #define VMA_DEBUG */
-
 #define MAX_VMA_ORDER 20
 
 static struct rb_tree *vma_tree;
@@ -42,17 +40,21 @@ static inline struct vm_area *vma_next(struct vm_area *vma)
 	return container_of(node, struct vm_area, node);
 }
 
-#ifdef VMA_DEBUG
 static void dump_free_vma_lists(void)
 {
 	struct vm_area *vma;
 	struct list_node *list, *node;
 	unsigned int i;
 
+	pr_info("free vma lists:");
+
 	for (i = 0; i <= MAX_VMA_ORDER; i++) {
 		list = &free_vma_lists[i];
 
-		printk("order:", dec(i));
+		if (list_empty(list))
+			continue;
+
+		printk("\torder:", dec(i));
 
 		node = list->next;
 		while (node != list) {
@@ -71,19 +73,23 @@ static void dump_vma_list(void)
 	struct vm_area *vma;
 	struct list_node *node;
 
-	printk("vma list:");
+	pr_info("vma list:");
 
 	node = vma_list.next;
 
 	while (node != &vma_list) {
 		vma = container_of(node, struct vm_area, node);
-		printk(" ", vma->free ? "free:": "nonfree:", range(vma->start, vma->end));
+		printk("\t", vma->free ? "free:": "nonfree:",
+			range(vma->start, vma->end), "\n");
 		node = node->next;
 	}
-
-	printk("\n");
 }
-#endif
+
+void vma_dump(void)
+{
+	dump_free_vma_lists();
+	dump_vma_list();
+}
 
 static inline struct vm_area *find_vma(unsigned long va)
 {
@@ -269,11 +275,11 @@ void *vmalloc(size_t size)
 {
 	void *ptr;
 
-	ptr = __vmalloc(GFP_KERNEL, size);
+	ptr = __vmalloc(GFP_HIGHMEM, size);
 	if (ptr)
 		return ptr;
 
-	return __vmalloc(GFP_HIGHMEM, size);
+	return __vmalloc(GFP_NORMAL, size);
 }
 
 void vfree(void *addr)

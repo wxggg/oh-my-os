@@ -89,7 +89,7 @@ void *kmem_cache_alloc(struct kmem_cache *cache)
 	struct list_node *node;
 
 	if (list_empty(&cache->slabs_partial)) {
-		page = alloc_page(GFP_HIGHMEM);
+		page = alloc_page(GFP_NORMAL);
 		if (slab_page_init(cache, page))
 			return NULL;
 		list_insert(&cache->slabs_partial, &page->node);
@@ -109,7 +109,7 @@ void kmem_cache_free(struct kmem_cache *cache, void *obj)
 	assert(!is_vmalloc_addr((uintptr_t)obj));
 
 	page = virt_to_page((uintptr_t)obj);
-	assert(page && page->slab_cache == cache && is_bit_set(page->flags, PAGE_HIGHMEM));
+	assert(page && page->slab_cache == cache && !is_bit_set(page->flags, PAGE_HIGHMEM));
 
 	free_block(cache, page, obj);
 }

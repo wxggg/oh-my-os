@@ -23,7 +23,7 @@ static unsigned long* get_pte(unsigned long *pgdir, unsigned long va)
 	unsigned long *pt;
 
 	if (!(*pde & PTE_P)) {
-		page = alloc_page(GFP_HIGHMEM);
+		page = alloc_page(GFP_NORMAL);
 		page_pa = page_to_phys(page);
 		memset((void *)phys_to_virt(page_pa), 0, PAGE_SIZE);
 
@@ -125,7 +125,7 @@ void enable_paging(unsigned long cr3)
 
 void *page_address(struct page *page)
 {
-	if (is_bit_set(page->flags, PAGE_HIGHMEM))
+	if (!is_bit_set(page->flags, PAGE_HIGHMEM))
 		return (void *)phys_to_virt(page_to_phys(page));
 
 	return vmap(&page, 1);

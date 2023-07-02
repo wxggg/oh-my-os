@@ -2,3 +2,4 @@
 
 void backtrace(void);
 void debug_init(void);
+void monitor(void);
