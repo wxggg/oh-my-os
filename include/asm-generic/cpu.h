@@ -22,6 +22,7 @@
 #define PIC_SLAVE	2
 #define PIC_COM1	4
 
+#define IRQ_GP		13
 #define IRQ_PGFLT	14
 #define IRQ_OFFSET	32
 #define IRQ_TIMER	(IRQ_OFFSET + PIC_TIMER)

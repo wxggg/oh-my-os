@@ -32,7 +32,6 @@ static inline void outb(uint16_t port, uint8_t data)
     __attribute__((always_inline));
 static inline void outw(uint16_t port, uint16_t data)
     __attribute__((always_inline));
-static inline uint32_t read_ebp(void) __attribute__((always_inline));
 static inline void breakpoint(void) __attribute__((always_inline));
 static inline uint32_t read_dr(unsigned regnum) __attribute__((always_inline));
 static inline void write_dr(unsigned regnum, uint32_t value)
@@ -48,14 +47,6 @@ static inline void lidt(struct pseudodesc *pd) __attribute__((always_inline));
 static inline void sti(void) __attribute__((always_inline));
 static inline void cli(void) __attribute__((always_inline));
 static inline void ltr(uint16_t sel) __attribute__((always_inline));
-static inline uint32_t read_eflags(void) __attribute__((always_inline));
-static inline void write_eflags(uint32_t eflags) __attribute__((always_inline));
-static inline void lcr0(uintptr_t cr0) __attribute__((always_inline));
-static inline void lcr3(uintptr_t cr3) __attribute__((always_inline));
-static inline uintptr_t rcr0(void) __attribute__((always_inline));
-static inline uintptr_t rcr1(void) __attribute__((always_inline));
-static inline uintptr_t rcr2(void) __attribute__((always_inline));
-static inline uintptr_t rcr3(void) __attribute__((always_inline));
 static inline void invlpg(void *addr) __attribute__((always_inline));
 
 static inline uint8_t inb(uint16_t port)
@@ -84,18 +75,6 @@ static inline void outw(uint16_t port, uint16_t data)
     asm volatile("outw %0, %1" ::"a"(data), "d"(port) : "memory");
 }
 
-static inline uint32_t read_ebp(void)
-{
-    uint32_t ebp;
-    asm volatile("movl %%ebp, %0" : "=r"(ebp));
-    return ebp;
-}
-
-static inline uint32_t read_eip(void) {
-    uint32_t eip;
-    asm volatile("movl 4(%%ebp), %0" : "=r" (eip));
-    return eip;
-}
 
 static inline void breakpoint(void) { asm volatile("int $3"); }
 
@@ -161,56 +140,6 @@ static inline void cli(void) { asm volatile("cli" ::: "memory"); }
 static inline void ltr(uint16_t sel)
 {
     asm volatile("ltr %0" ::"r"(sel) : "memory");
-}
-
-static inline uint32_t read_eflags(void)
-{
-    uint32_t eflags;
-    asm volatile("pushfl; popl %0" : "=r"(eflags));
-    return eflags;
-}
-
-static inline void write_eflags(uint32_t eflags)
-{
-    asm volatile("pushl %0; popfl" ::"r"(eflags));
-}
-
-static inline void lcr0(uintptr_t cr0)
-{
-    asm volatile("mov %0, %%cr0" ::"r"(cr0) : "memory");
-}
-
-static inline void lcr3(uintptr_t cr3)
-{
-    asm volatile("mov %0, %%cr3" ::"r"(cr3) : "memory");
-}
-
-static inline uintptr_t rcr0(void)
-{
-    uintptr_t cr0;
-    asm volatile("mov %%cr0, %0" : "=r"(cr0)::"memory");
-    return cr0;
-}
-
-static inline uintptr_t rcr1(void)
-{
-    uintptr_t cr1;
-    asm volatile("mov %%cr1, %0" : "=r"(cr1)::"memory");
-    return cr1;
-}
-
-static inline uintptr_t rcr2(void)
-{
-    uintptr_t cr2;
-    asm volatile("mov %%cr2, %0" : "=r"(cr2)::"memory");
-    return cr2;
-}
-
-static inline uintptr_t rcr3(void)
-{
-    uintptr_t cr3;
-    asm volatile("mov %%cr3, %0" : "=r"(cr3)::"memory");
-    return cr3;
 }
 
 static inline void invlpg(void *addr)

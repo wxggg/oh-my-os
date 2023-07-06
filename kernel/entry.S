@@ -23,10 +23,10 @@ spin:
 
 .data
 .align PAGE_SIZE
-	.globl bootstack
+.globl bootstack
 bootstack:
 	.space KERNEL_STACK_SIZE
-	.global bootstacktop
+.global bootstacktop
 bootstacktop:
 
 .align 4
@@ -64,6 +64,57 @@ __trapret:
 # get rid of the trap number and error code
 	addl $0x8, %esp
 	iret
+
+.globl run_entrys
+run_entrys:
+	movl 4(%esp), %esp
+	jmp __trapret
+
+.text
+.global thread_entry
+thread_entry:
+	pushl %edx
+	call *%ebx
+
+	pushl %eax
+	call thread_exit
+
+halt:
+	call schedule
+	hlt
+	jmp halt
+
+stall:
+	jmp stall
+
+.text
+.globl context_switch
+context_switch:                      # context_switch(from, to)
+	# save from's registers
+	movl 4(%esp), %eax          # eax points to from
+	popl 0(%eax)                # save eip !popl
+	movl %esp, 4(%eax)
+	movl %ebx, 8(%eax)
+	movl %ecx, 12(%eax)
+	movl %edx, 16(%eax)
+	movl %esi, 20(%eax)
+	movl %edi, 24(%eax)
+	movl %ebp, 28(%eax)
+
+	# restore to's registers
+	movl 4(%esp), %eax          # not 8(%esp): popped return address already
+	# eax now points to to
+	movl 28(%eax), %ebp
+	movl 24(%eax), %edi
+	movl 20(%eax), %esi
+	movl 16(%eax), %edx
+	movl 12(%eax), %ecx
+	movl 8(%eax), %ebx
+	movl 4(%eax), %esp
+
+	pushl 0(%eax)               # push eip
+
+	ret
 
 .text
 .global vector0
@@ -108,37 +159,30 @@ vector7:
 	jmp __alltraps
 .global vector8
 vector8:
-	pushl $0
 	pushl $8
 	jmp __alltraps
 .global vector9
 vector9:
-	pushl $0
 	pushl $9
 	jmp __alltraps
 .global vector10
 vector10:
-	pushl $0
 	pushl $10
 	jmp __alltraps
 .global vector11
 vector11:
-	pushl $0
 	pushl $11
 	jmp __alltraps
 .global vector12
 vector12:
-	pushl $0
 	pushl $12
 	jmp __alltraps
 .global vector13
 vector13:
-	pushl $0
 	pushl $13
 	jmp __alltraps
 .global vector14
 vector14:
-	pushl $0
 	pushl $14
 	jmp __alltraps
 .global vector15
@@ -292,4 +336,3 @@ __vectors:
 	.long vector34
 	.long vector35
 	.long vector36
-

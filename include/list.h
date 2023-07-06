@@ -29,6 +29,16 @@ static inline void list_insert(struct list_node *cur, struct list_node *node)
 	cur->next = node;
 }
 
+static inline void list_insert_head(struct list_node *head, struct list_node *node)
+{
+	list_insert(head, node);
+}
+
+static inline void list_insert_tail(struct list_node *head, struct list_node *node)
+{
+	list_insert_before(head, node);
+}
+
 static inline void list_remove(struct list_node *node)
 {
 	node->prev->next = node->next;

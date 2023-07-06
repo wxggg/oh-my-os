@@ -27,7 +27,9 @@ int print_args(const char *end, ...);
 #define printk(...)  print_args(line_end, ##__VA_ARGS__, line_end)
 #define printk_tick(...)  printk("[", dec(tick() / 100), ".", dec(tick() % 100), "] ", __VA_ARGS__)
 #define pr_info(...) printk_tick(__VA_ARGS__, "\n")
-#define pr_err(...)  printk_tick("[", __FILE__, ":", dec(__LINE__), "] <error> ", __func__, ": ",\
+#define pr_err(...) printk_tick(__VA_ARGS__, "\n")
+
+#define pr_err_debug(...)  printk_tick("[", __FILE__, ":", dec(__LINE__), "] <error> ", __func__, ": ",\
 		__VA_ARGS__, "\n")
 
 #ifdef PR_DEBUG

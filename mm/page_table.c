@@ -3,6 +3,7 @@
 #include <stdio.h>
 #include <memory.h>
 #include <vmalloc.h>
+#include <register.h>
 
 /* #define PAGE_TABLE_DEBUG */
 

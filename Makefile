@@ -79,6 +79,7 @@ KINCLUDE	+= 	kernel/
 KSRCDIR		+= 	kernel \
 			mm \
 			graphic \
+			schedule \
 
 KCFLAGS		+= $(addprefix -I,$(KINCLUDE))
 

@@ -6,16 +6,15 @@
 #define assert(_expr, ...)					\
 	do {							\
 		if (!(_expr)) {					\
-			pr_err("assert failed: ", ##__VA_ARGS__);\
-			backtrace();				\
-			do {} while(1);				\
+			pr_err_debug("assert failed: ", ##__VA_ARGS__);\
+			dump_stack();				\
 		}						\
 	} while (0)
 
 #define warn_on(_expr, ...)					\
 	do {							\
 		if ((_expr)) {					\
-			pr_err("warning: ", ##__VA_ARGS__);	\
-			backtrace();				\
+			pr_err_debug("warning: ", ##__VA_ARGS__);\
+			dump_stack();				\
 		}						\
 	} while (0)

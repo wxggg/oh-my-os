@@ -8,7 +8,7 @@
 #include <string.h>
 #include <kmalloc.h>
 #include <vmalloc.h>
-#include <process.h>
+#include <schedule.h>
 #include <assert.h>
 
 #define E820_MAX	20
@@ -169,21 +169,22 @@ static void gdt_init(void)
 
 void kernel_map(unsigned long va, unsigned long pa, size_t size, uint32_t flag)
 {
-	return page_map(current->mm->pgdir, va, pa, size, flag);
+	return page_map(current->proc->mm->pgdir, va, pa, size, flag);
 }
 
 void kernel_unmap(unsigned long va, size_t size)
 {
-	return page_unmap(current->mm->pgdir, va, size);
+	return page_unmap(current->proc->mm->pgdir, va, size);
 }
 
 void kernel_page_table_dump(unsigned long va, size_t size)
 {
-	page_table_dump(current->mm->pgdir, va, size);
+	page_table_dump(current->proc->mm->pgdir, va, size);
 }
 
 void memory_init(void)
 {
+	struct mm_context *mm;
 	struct page *page;
 	unsigned long cr3;
 
@@ -191,29 +192,31 @@ void memory_init(void)
 
 	scan_memory_slot();
 
-	current->mm = kmalloc(sizeof(*current->mm));
-	assert(current->mm);
+	mm = kmalloc(sizeof(*current->proc->mm));
+	assert(mm);
+
+	current->proc->mm = mm;
 
 	page = alloc_page(GFP_NORMAL);
 	cr3 = page_to_phys(page);
-	current->mm->pgdir = (void *)phys_to_virt(cr3);
+	mm->pgdir = (void *)phys_to_virt(cr3);
 
 	/*
 	 * insert one item in pgdir to map virtual page
 	 * table to VPT. One pde covers 1<<10 * 1<<12 = 4MB
 	 */
-	set_pde(current->mm->pgdir + pde_index(VPT), cr3, PDE_P | PDE_W);
+	set_pde(mm->pgdir + pde_index(VPT), cr3, PDE_P | PDE_W);
 
 	/* map linear area */
 	kernel_map(KERNEL_VIRT_BASE, 0x0, linear_end_pfn << PAGE_SHIFT, PTE_W);
 
-	current->mm->pgdir[0] = current->mm->pgdir[pde_index(KERNEL_VIRT_BASE)];
+	mm->pgdir[0] = mm->pgdir[pde_index(KERNEL_VIRT_BASE)];
 
 	enable_paging(cr3);
 
         gdt_init();
 
-	current->mm->pgdir[0] = 0;
+	mm->pgdir[0] = 0;
 
 	vmalloc_init();
 

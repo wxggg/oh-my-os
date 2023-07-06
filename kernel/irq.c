@@ -5,6 +5,7 @@
 #include <error.h>
 #include <debug.h>
 #include <keyboard.h>
+#include <register.h>
 
 struct gate_desc {
 	unsigned offset_15_0 : 16;
@@ -48,8 +49,35 @@ void idt_init(void)
 			 __vectors[i], DPL_KERNEL);
 	}
 
+	for(int i = 37; i < 256; i++) {
+		set_gate(&idt_array[i], 0, GD_KTEXT,
+			 __vectors[36], DPL_KERNEL);
+	}
+
 	lidt(&idt_pd);
 	pr_info("idt init success");
+}
+
+static void dump_trapframe(struct trapframe *tf)
+{
+	pr_info("trapframe: ", hex(tf));
+	pr_info("\teax:\t", hex(tf->reg.eax));
+	pr_info("\tecx:\t", hex(tf->reg.ecx));
+	pr_info("\tedx:\t", hex(tf->reg.edx));
+	pr_info("\tebx:\t", hex(tf->reg.ebx));
+	pr_info("\tesp:\t", hex(tf->reg.esp));
+	pr_info("\tebp:\t", hex(tf->reg.ebp));
+	pr_info("\tesi:\t", hex(tf->reg.esi));
+	pr_info("\tedi:\t", hex(tf->reg.edi));
+	pr_info("\tes:\t", hex(tf->es));
+	pr_info("\tds:\t", hex(tf->ds));
+	pr_info("\tirq:\t", dec(tf->irq));
+	pr_info("\terr:\t", dec(tf->err));
+	pr_info("\tcs:\t", hex(tf->cs));
+	pr_info("\teip:\t", hex(tf->eip));
+	pr_info("\teflags:\t", hex(tf->eflags));
+
+	dump_trapstack(tf->reg.ebp, tf->eip);
 }
 
 void irq_handler(struct trapframe *tf)
@@ -66,14 +94,20 @@ void irq_handler(struct trapframe *tf)
 
 	switch (tf->irq)
 	{
+		case IRQ_GP:
+			pr_err("General protection fault");
+			dump_trapframe(tf);
+			monitor();
+			break;
 		case IRQ_PGFLT:
-			pr_err("page fault, unable to access address:", hex(rcr2()));
-			backtrace();
+			pr_err("Unable to handle kernel NULL pointer "
+			       "dereference at virtual address ", hex(rcr2()));
+			dump_trapframe(tf);
 			monitor();
 			break;
 		default:
 			pr_err("trap: unknown irq ", dec(tf->irq));
-			backtrace();
+			dump_trapframe(tf);
 			monitor();
 			break;
 	}

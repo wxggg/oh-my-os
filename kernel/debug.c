@@ -4,6 +4,7 @@
 #include <rb_tree.h>
 #include <kernel.h>
 #include <assert.h>
+#include <register.h>
 
 #define N_GSYM      0x20    // global symbol
 #define N_FNAME     0x22    // F77 function name
@@ -53,56 +54,76 @@ static string debug_s;
 static char g_debug_buf[128];
 static bool b_init_debug = false;
 
-void backtrace(void)
+static void dump_eip(uint32_t eip)
 {
-	unsigned long *ebp = (unsigned long *)read_ebp();
-	unsigned long eip = read_eip();
-	const char *str = __STABSTR_BEGIN__;
-	const struct stab *stab;
 	struct rb_node *node;
+	const struct stab *stab;
 	const char *file = NULL, *func = NULL;
+	const char *str = __STABSTR_BEGIN__;
 	char *split;
-	int i;
 
 	if (!b_init_debug)
 		return;
 
+	node = rb_tree_search(g_stab_so_tree, eip);
+	if (node) {
+		stab = rb_node_value(node);
+		if (!stab)
+			return;
+
+		file = str + stab->n_strx;
+	} else {
+		file = "<unknown>";
+	}
+
+	node = rb_tree_search(g_stab_fun_tree, eip);
+	if (node) {
+		stab = rb_node_value(node);
+		if (!stab)
+			return;
+
+		func = str + stab->n_strx;
+
+		debug_s.length = 0;
+		split = strfind(func, ':');
+		if (split)
+			string_append_strn(&debug_s, func, split - func);
+		else
+			string_append_str(&debug_s, func);
+
+		pr_info("\t", debug_s.str, "+", hex(eip - stab->n_value), "/",
+			hex(rb_node_key_end(node) - rb_node_key_start(node)),
+			"\t[", file, "]");
+	} else {
+		pr_info("\t", "unknown", "\t[", file, "]");
+	}
+}
+
+void dump_trapstack(uint32_t ebp, uint32_t eip)
+{
+	int i;
+
 	pr_info("Call Trace:");
+
 	for (i = 0; ebp && i < 20; i ++) {
-		node = rb_tree_search(g_stab_so_tree, eip);
-		if (node) {
-			stab = rb_node_value(node);
-			if (!stab)
-				return;
+		dump_eip(eip);
+		eip = ((uint32_t *)ebp)[1];
+		ebp = ((uint32_t *)ebp)[0];
+	}
 
-			file = str + stab->n_strx;
-		} else {
-			file = "<unknown>";
-		}
+	pr_info("---[ end trace ]---");
+}
 
-		node = rb_tree_search(g_stab_fun_tree, eip);
-		if (node) {
-			stab = rb_node_value(node);
-			if (!stab)
-				return;
+void dump_stack(void)
+{
+	unsigned long *ebp = (unsigned long *)read_ebp();
+	unsigned long eip = read_eip();
+	int i;
 
-			func = str + stab->n_strx;
+	pr_info("Call Trace:");
 
-			debug_s.length = 0;
-			split = strfind(func, ':');
-			if (split)
-				string_append_strn(&debug_s, func, split - func);
-			else
-				string_append_str(&debug_s, func);
-
-			pr_info("\t", debug_s.str,
-				"+", hex(eip - stab->n_value), "/",
-				hex(rb_node_key_end(node) - rb_node_key_start(node)),
-				"\t[", file, "]");
-		} else {
-			pr_info("\t", "unknown", "\t[", file, "]");
-		}
-
+	for (i = 0; ebp && i < 20; i ++) {
+		dump_eip(eip);
 		eip = ebp[1];
 		ebp = (unsigned long *)ebp[0];
 	}

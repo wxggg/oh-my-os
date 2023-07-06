@@ -15,6 +15,7 @@
 #include <irq.h>
 #include <stdio.h>
 #include <x86.h>
+#include <schedule.h>
 
 #define IO_TIMER     0x40
 #define IO_TIMER_CMD 0x43
@@ -46,6 +47,9 @@ inline unsigned long tick()
 static void timer_irq_handler()
 {
 	ticks++;
+
+	if (ticks % 10 == 0)
+		schedule();
 }
 
 /**
