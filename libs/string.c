@@ -6,8 +6,9 @@
 #include <memory.h>
 #include <assert.h>
 #include <log2.h>
+#include <vector.h>
 
-static const char * __str_hex = "0123456789abcdef";
+static const char *__str_hex = "0123456789abcdef";
 
 /* *
  * strlen - calculate the length of the string @s, not including
@@ -18,11 +19,11 @@ static const char * __str_hex = "0123456789abcdef";
  * */
 size_t strlen(const char *s)
 {
-    size_t cnt = 0;
-    while (*s++ != '\0') {
-        cnt++;
-    }
-    return cnt;
+	size_t cnt = 0;
+	while (*s++ != '\0') {
+		cnt++;
+	}
+	return cnt;
 }
 
 /* *
@@ -40,11 +41,11 @@ size_t strlen(const char *s)
  * */
 size_t strnlen(const char *s, size_t len)
 {
-    size_t cnt = 0;
-    while (cnt < len && *s++ != '\0') {
-        cnt++;
-    }
-    return cnt;
+	size_t cnt = 0;
+	while (cnt < len && *s++ != '\0') {
+		cnt++;
+	}
+	return cnt;
 }
 
 /* *
@@ -62,12 +63,12 @@ size_t strnlen(const char *s, size_t len)
 char *strcpy(char *dst, const char *src)
 {
 #ifdef __HAVE_ARCH_STRCPY
-    return __strcpy(dst, src);
+	return __strcpy(dst, src);
 #else
-    char *p = dst;
-    while ((*p++ = *src++) != '\0')
-        /* nothing */;
-    return dst;
+	char *p = dst;
+	while ((*p++ = *src++) != '\0')
+		/* nothing */;
+	return dst;
 #endif /* __HAVE_ARCH_STRCPY */
 }
 
@@ -83,14 +84,14 @@ char *strcpy(char *dst, const char *src)
  * */
 char *strncpy(char *dst, const char *src, size_t len)
 {
-    char *p = dst;
-    while (len > 0) {
-        if ((*p = *src) != '\0') {
-            src++;
-        }
-        p++, len--;
-    }
-    return dst;
+	char *p = dst;
+	while (len > 0) {
+		if ((*p = *src) != '\0') {
+			src++;
+		}
+		p++, len--;
+	}
+	return dst;
 }
 
 /* *
@@ -111,12 +112,12 @@ char *strncpy(char *dst, const char *src, size_t len)
 int strcmp(const char *s1, const char *s2)
 {
 #ifdef __HAVE_ARCH_STRCMP
-    return __strcmp(s1, s2);
+	return __strcmp(s1, s2);
 #else
-    while (*s1 != '\0' && *s1 == *s2) {
-        s1++, s2++;
-    }
-    return (int)((unsigned char)*s1 - (unsigned char)*s2);
+	while (*s1 != '\0' && *s1 == *s2) {
+		s1++, s2++;
+	}
+	return (int)((unsigned char)*s1 - (unsigned char)*s2);
 #endif /* __HAVE_ARCH_STRCMP */
 }
 
@@ -134,10 +135,10 @@ int strcmp(const char *s1, const char *s2)
  * */
 int strncmp(const char *s1, const char *s2, size_t n)
 {
-    while (n > 0 && *s1 != '\0' && *s1 == *s2) {
-        n--, s1++, s2++;
-    }
-    return (n == 0) ? 0 : (int)((unsigned char)*s1 - (unsigned char)*s2);
+	while (n > 0 && *s1 != '\0' && *s1 == *s2) {
+		n--, s1++, s2++;
+	}
+	return (n == 0) ? 0 : (int)((unsigned char)*s1 - (unsigned char)*s2);
 }
 
 /* *
@@ -150,13 +151,13 @@ int strncmp(const char *s1, const char *s2, size_t n)
  * */
 char *strchr(const char *s, char c)
 {
-    while (*s != '\0') {
-        if (*s == c) {
-            return (char *)s;
-        }
-        s++;
-    }
-    return NULL;
+	while (*s != '\0') {
+		if (*s == c) {
+			return (char *)s;
+		}
+		s++;
+	}
+	return NULL;
 }
 
 /* *
@@ -170,13 +171,13 @@ char *strchr(const char *s, char c)
  * */
 char *strfind(const char *s, char c)
 {
-    while (*s != '\0') {
-        if (*s == c) {
-            break;
-        }
-        s++;
-    }
-    return (char *)s;
+	while (*s != '\0') {
+		if (*s == c) {
+			break;
+		}
+		s++;
+	}
+	return (char *)s;
 }
 
 /* *
@@ -214,54 +215,54 @@ char *strfind(const char *s, char c)
  * */
 long strtol(const char *s, char **endptr, int base)
 {
-    int neg = 0;
-    long val = 0;
+	int neg = 0;
+	long val = 0;
 
-    // gobble initial whitespace
-    while (*s == ' ' || *s == '\t') {
-        s++;
-    }
+	// gobble initial whitespace
+	while (*s == ' ' || *s == '\t') {
+		s++;
+	}
 
-    // plus/minus sign
-    if (*s == '+') {
-        s++;
-    } else if (*s == '-') {
-        s++, neg = 1;
-    }
+	// plus/minus sign
+	if (*s == '+') {
+		s++;
+	} else if (*s == '-') {
+		s++, neg = 1;
+	}
 
-    // hex or octal base prefix
-    if ((base == 0 || base == 16) && (s[0] == '0' && s[1] == 'x')) {
-        s += 2, base = 16;
-    } else if (base == 0 && s[0] == '0') {
-        s++, base = 8;
-    } else if (base == 0) {
-        base = 10;
-    }
+	// hex or octal base prefix
+	if ((base == 0 || base == 16) && (s[0] == '0' && s[1] == 'x')) {
+		s += 2, base = 16;
+	} else if (base == 0 && s[0] == '0') {
+		s++, base = 8;
+	} else if (base == 0) {
+		base = 10;
+	}
 
-    // digits
-    while (1) {
-        int dig;
+	// digits
+	while (1) {
+		int dig;
 
-        if (*s >= '0' && *s <= '9') {
-            dig = *s - '0';
-        } else if (*s >= 'a' && *s <= 'z') {
-            dig = *s - 'a' + 10;
-        } else if (*s >= 'A' && *s <= 'Z') {
-            dig = *s - 'A' + 10;
-        } else {
-            break;
-        }
-        if (dig >= base) {
-            break;
-        }
-        s++, val = (val * base) + dig;
-        // we don't properly detect overflow!
-    }
+		if (*s >= '0' && *s <= '9') {
+			dig = *s - '0';
+		} else if (*s >= 'a' && *s <= 'z') {
+			dig = *s - 'a' + 10;
+		} else if (*s >= 'A' && *s <= 'Z') {
+			dig = *s - 'A' + 10;
+		} else {
+			break;
+		}
+		if (dig >= base) {
+			break;
+		}
+		s++, val = (val * base) + dig;
+		// we don't properly detect overflow!
+	}
 
-    if (endptr) {
-        *endptr = (char *)s;
-    }
-    return (neg ? -val : val);
+	if (endptr) {
+		*endptr = (char *)s;
+	}
+	return (neg ? -val : val);
 }
 
 /* *
@@ -276,13 +277,13 @@ long strtol(const char *s, char **endptr, int base)
 void *memset(void *s, char c, size_t n)
 {
 #ifdef __HAVE_ARCH_MEMSET
-    return __memset(s, c, n);
+	return __memset(s, c, n);
 #else
-    char *p = s;
-    while (n-- > 0) {
-        *p++ = c;
-    }
-    return s;
+	char *p = s;
+	while (n-- > 0) {
+		*p++ = c;
+	}
+	return s;
 #endif /* __HAVE_ARCH_MEMSET */
 }
 
@@ -298,21 +299,21 @@ void *memset(void *s, char c, size_t n)
 void *memmove(void *dst, const void *src, size_t n)
 {
 #ifdef __HAVE_ARCH_MEMMOVE
-    return __memmove(dst, src, n);
+	return __memmove(dst, src, n);
 #else
-    const char *s = src;
-    char *d = dst;
-    if (s < d && s + n > d) {
-        s += n, d += n;
-        while (n-- > 0) {
-            *--d = *--s;
-        }
-    } else {
-        while (n-- > 0) {
-            *d++ = *s++;
-        }
-    }
-    return dst;
+	const char *s = src;
+	char *d = dst;
+	if (s < d && s + n > d) {
+		s += n, d += n;
+		while (n-- > 0) {
+			*--d = *--s;
+		}
+	} else {
+		while (n-- > 0) {
+			*d++ = *s++;
+		}
+	}
+	return dst;
 #endif /* __HAVE_ARCH_MEMMOVE */
 }
 
@@ -333,14 +334,14 @@ void *memmove(void *dst, const void *src, size_t n)
 void *memcpy(void *dst, const void *src, size_t n)
 {
 #ifdef __HAVE_ARCH_MEMCPY
-    return __memcpy(dst, src, n);
+	return __memcpy(dst, src, n);
 #else
-    const char *s = src;
-    char *d = dst;
-    while (n-- > 0) {
-        *d++ = *s++;
-    }
-    return dst;
+	const char *s = src;
+	char *d = dst;
+	while (n-- > 0) {
+		*d++ = *s++;
+	}
+	return dst;
 #endif /* __HAVE_ARCH_MEMCPY */
 }
 
@@ -360,20 +361,20 @@ void *memcpy(void *dst, const void *src, size_t n)
  * */
 int memcmp(const void *v1, const void *v2, size_t n)
 {
-    const char *s1 = (const char *)v1;
-    const char *s2 = (const char *)v2;
-    while (n-- > 0) {
-        if (*s1 != *s2) {
-            return (int)((unsigned char)*s1 - (unsigned char)*s2);
-        }
-        s1++, s2++;
-    }
-    return 0;
+	const char *s1 = (const char *)v1;
+	const char *s2 = (const char *)v2;
+	while (n-- > 0) {
+		if (*s1 != *s2) {
+			return (int)((unsigned char)*s1 - (unsigned char)*s2);
+		}
+		s1++, s2++;
+	}
+	return 0;
 }
 
 void reverse_str(char *buf, int i, int j)
 {
-	for (char c; i < j; i++, j--){
+	for (char c; i < j; i++, j--) {
 		c = buf[i];
 		buf[i] = buf[j];
 		buf[j] = c;
@@ -439,7 +440,7 @@ void string_init(string *s, char *buf, size_t size)
 	s->capacity = size;
 }
 
-string *string_create(void)
+string *ksalloc(void)
 {
 	string *s;
 
@@ -453,7 +454,7 @@ string *string_create(void)
 	return s;
 }
 
-void string_destroy(string *s)
+void ksfree(string *s)
 {
 	if (!s)
 		return;
@@ -522,7 +523,7 @@ int string_append_strn(string *s, const char *str, size_t length)
 
 int string_append_str(string *s, const char *str)
 {
-    return string_append_strn(s, str, strlen(str));
+	return string_append_strn(s, str, strlen(str));
 }
 
 int string_append(string *s, string *a)
@@ -544,4 +545,30 @@ int string_append_int(string *s, int val, bool hex)
 		length = to_str(val, buf, 32);
 
 	return string_append_strn(s, buf, length);
+}
+
+/* split string and push the result to vec */
+int string_split(string *s, char c, vector *vec)
+{
+	int i;
+	string *sub;
+
+	sub = ksalloc();
+	for (i = 0; i < s->length; i++) {
+		if (s->str[i] == c) {
+			vector_push(vec, string *,  sub);
+			sub = ksalloc();
+			continue;
+		}
+
+		string_append_char(sub, s->str[i]);
+	}
+
+	if (!string_empty(sub)) {
+		vector_push(vec, string *, sub);
+	} else {
+		ksfree(sub);
+	}
+
+	return 0;
 }

@@ -80,6 +80,8 @@ static void dump_trapframe(struct trapframe *tf)
 	dump_trapstack(tf->reg.ebp, tf->eip);
 }
 
+void monitor(void);
+
 void irq_handler(struct trapframe *tf)
 {
 	if (tf->irq > IRQ_NUM) {

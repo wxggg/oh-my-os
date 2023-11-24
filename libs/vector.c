@@ -25,6 +25,12 @@ vector *__vector_create(size_t element_size)
 	return vec;
 }
 
+void __vector_destroy(vector *vec)
+{
+	kfree(vec->base);
+	kfree(vec);
+}
+
 static inline void *__ele(vector *vec, unsigned index)
 {
 	return vec->base + vec->element_size * index;

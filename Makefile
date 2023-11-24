@@ -80,6 +80,8 @@ KSRCDIR		+= 	kernel \
 			mm \
 			graphic \
 			schedule \
+			fs \
+			usr \
 
 KCFLAGS		+= $(addprefix -I,$(KINCLUDE))
 

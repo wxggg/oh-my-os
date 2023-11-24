@@ -1,6 +1,7 @@
 #pragma once
 
 #include <types.h>
+#include <vector.h>
 
 typedef struct string {
 	char *str;
@@ -30,11 +31,19 @@ void reverse_str(char *buf, int i, int j);
 int to_hex(unsigned int val, char *buf, int len);
 int to_str(int val, char *buf, int len);
 
-string *string_create(void);
+static inline bool string_empty(string *s)
+{
+	return s->length == 0;
+}
+
+string *ksalloc(void);
+void ksfree(string *s);
 void string_init(string *s, char *buf, size_t size);
-void string_destroy(string *s);
+
 int string_append_char(string *s, char c);
 int string_append_strn(string *s, const char *str, size_t length);
 int string_append_str(string *s, const char *str);
 int string_append(string *s, string *a);
 int string_append_int(string *s, int val, bool hex);
+
+int string_split(string *s, char c, vector *vec);

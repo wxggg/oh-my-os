@@ -5,6 +5,7 @@
 #include <kernel.h>
 #include <assert.h>
 #include <register.h>
+#include <fs.h>
 
 #define N_GSYM      0x20    // global symbol
 #define N_FNAME     0x22    // F77 function name

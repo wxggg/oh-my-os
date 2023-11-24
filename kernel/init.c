@@ -10,6 +10,9 @@
 #include <vmalloc.h>
 #include <assert.h>
 #include <schedule.h>
+#include <fs.h>
+#include <vector.h>
+#include <usr.h>
 
 int kern_init(void) __attribute__((noreturn));
 
@@ -31,15 +34,31 @@ int thread_test(void *arg)
 
 void monitor(void)
 {
-	string *s = string_create();
+	struct file *file;
+	vector *vec = vector_create(string *);
+	string *s = ksalloc();
+	string *sub, *cmd;
+
 	while (1) {
 		readline(s);
 
-		if (!s->str)
+		if (!s->str || !s->length)
 			continue;
 
-		if (!strcmp(s->str, "dump_stack")) {
-			dump_stack();
+		string_split(s, ' ', vec);
+
+		cmd = vector_at(vec, string *, 0);
+
+		file = binfs_find_file(cmd->str);
+		if (file && file->fops->exec) {
+			file->fops->exec(vec);
+		} else {
+			pr_info("command not found: ", cmd->str);
+		}
+
+		while (!vector_empty(vec)) {
+			sub = vector_pop(vec, string *);
+			ksfree(sub);
 		}
 
 		if (!strcmp(s->str, "gpu_dump")) {
@@ -66,6 +85,15 @@ void monitor(void)
 			thread_run(thread_test, NULL);
 		}
 	}
+
+	ksfree(s);
+	__vector_destroy(vec);
+}
+
+int kernel_init_late(void)
+{
+	usr_init();
+	return 0;
 }
 
 int kern_init(void)
@@ -89,7 +117,11 @@ int kern_init(void)
 
 	schedule_init();
 
+	fs_init();
+
 	pr_info("kernel init success!");
+
+	kernel_init_late();
 
 	while (1) {
 		monitor();
