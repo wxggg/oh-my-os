@@ -37,12 +37,31 @@ static int do_cd(vector *vec)
 	struct directory *dir;
 	string *name;
 
-	if (vector_size(vec) != 2) {
-		printk("cd: invalid arguments ", dec(vector_size(vec)));
+	if (vector_size(vec) > 2) {
+		printk("cd: invalid arguments ", dec(vector_size(vec)), "\n");
 		return -EINVAL;
 	}
 
+	if (vector_size(vec) == 1) {
+		current_dir = root;
+		return 0;
+	}
+
 	name = vector_at(vec, string *, 1);
+
+	if (!strcmp(name->str, "..")) {
+		if (current_dir->parent)
+			current_dir = current_dir->parent;
+		return 0;
+	}
+
+	if (!strcmp(name->str, "."))
+		return 0;
+
+	if (!strcmp(name->str, "~")) {
+		current_dir = root;
+		return 0;
+	}
 
 	dir = dir_find_dir(current_dir, name->str);
 	if (!dir) {
@@ -58,6 +77,50 @@ static struct file_operations cd_fops = {
 	.exec = do_cd,
 };
 
+static int do_cat(vector *vec)
+{
+	int ret;
+	struct file *file;
+	string *name, *content;
+
+	if (vector_size(vec) != 2) {
+		printk("cat: invalid arguments ", dec(vector_size(vec)), "\n");
+		return -EINVAL;
+	}
+
+	name = vector_at(vec, string *, 1);
+
+	file = dir_find_file(current_dir, name->str);
+	if (!file) {
+		printk("cat: no such file ", name->str, "\n");
+		return -ENOENT;
+	}
+
+	if (!file->fops->read) {
+		printk("cat: read is not supported for ", file->name, "\n");
+		return -EINVAL;
+	}
+
+	content = ksalloc();
+
+	ret = file->fops->read(content);
+	if (ret)
+		goto err_free_content;
+
+	printk(content->str, "\n");
+
+	ksfree(content);
+	return 0;
+
+err_free_content:
+	ksfree(content);
+	return ret;
+}
+
+static struct file_operations cat_fops = {
+	.exec = do_cat,
+};
+
 int usr_fs_init(void)
 {
 	int ret;
@@ -70,6 +133,10 @@ int usr_fs_init(void)
 		return ret;
 
 	ret = binfs_create_file("cd", &cd_fops, &file);
+	if (ret)
+		return ret;
+
+	ret = binfs_create_file("cat", &cat_fops, &file);
 	if (ret)
 		return ret;
 

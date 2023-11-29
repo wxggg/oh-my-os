@@ -88,9 +88,9 @@ static void dump_eip(uint32_t eip)
 		debug_s.length = 0;
 		split = strfind(func, ':');
 		if (split)
-			string_append_strn(&debug_s, func, split - func);
+			ksappend_strn(&debug_s, func, split - func);
 		else
-			string_append_str(&debug_s, func);
+			ksappend_str(&debug_s, func);
 
 		pr_info("\t", debug_s.str, "+", hex(eip - stab->n_value), "/",
 			hex(rb_node_key_end(node) - rb_node_key_start(node)),

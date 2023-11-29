@@ -40,10 +40,25 @@ string *ksalloc(void);
 void ksfree(string *s);
 void string_init(string *s, char *buf, size_t size);
 
-int string_append_char(string *s, char c);
-int string_append_strn(string *s, const char *str, size_t length);
-int string_append_str(string *s, const char *str);
-int string_append(string *s, string *a);
-int string_append_int(string *s, int val, bool hex);
+int ksappend_char(string *s, char c);
+int ksappend_strn(string *s, const char *str, size_t length);
+int ksappend_str(string *s, const char *str);
+int ksappend(string *s, string *a);
+int ksappend_int(string *s, int val);
+int ksappend_hex(string *s, int val);
+
+static inline int ksappend_kv(string *s, const char *key, int val)
+{
+	ksappend_str(s, key);
+	ksappend_int(s, val);
+	return 0;
+}
+
+static inline int ksappend_kvx(string *s, const char *key, int val)
+{
+	ksappend_str(s, key);
+	ksappend_hex(s, val);
+	return 0;
+}
 
 int string_split(string *s, char c, vector *vec);

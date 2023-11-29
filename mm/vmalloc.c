@@ -8,6 +8,7 @@
 #include <kmalloc.h>
 #include <error.h>
 #include <mm.h>
+#include <fs.h>
 
 #define MAX_VMA_ORDER 20
 
@@ -40,57 +41,6 @@ static inline struct vm_area *vma_next(struct vm_area *vma)
 	return container_of(node, struct vm_area, node);
 }
 
-static void dump_free_vma_lists(void)
-{
-	struct vm_area *vma;
-	struct list_node *list, *node;
-	unsigned int i;
-
-	pr_info("free vma lists:");
-
-	for (i = 0; i <= MAX_VMA_ORDER; i++) {
-		list = &free_vma_lists[i];
-
-		if (list_empty(list))
-			continue;
-
-		printk("\torder:", dec(i));
-
-		node = list->next;
-		while (node != list) {
-			vma = container_of(node, struct vm_area, free_node);
-			printk(" ", range(vma->start, vma->end));
-			node = node->next;
-			assert(node);
-		}
-
-		printk("\n");
-	}
-}
-
-static void dump_vma_list(void)
-{
-	struct vm_area *vma;
-	struct list_node *node;
-
-	pr_info("vma list:");
-
-	node = vma_list.next;
-
-	while (node != &vma_list) {
-		vma = container_of(node, struct vm_area, node);
-		printk("\t", vma->free ? "free:": "nonfree:",
-			range(vma->start, vma->end), "\n");
-		node = node->next;
-	}
-}
-
-void vma_dump(void)
-{
-	dump_free_vma_lists();
-	dump_vma_list();
-}
-
 static inline struct vm_area *find_vma(unsigned long va)
 {
 	struct rb_node *node;
@@ -118,7 +68,8 @@ static void free_vma(struct vm_area *vma)
 
 	while ((prev = vma_prev(vma)) && prev->free) {
 		assert((prev->end) == vma->start, "vma is not adjacent, ",
-			range(prev->start, prev->end), ", ", range(vma->start, vma->end));
+		       range(prev->start, prev->end), ", ",
+		       range(vma->start, vma->end));
 
 		vma->start = prev->start;
 		list_remove(&prev->node);
@@ -128,7 +79,8 @@ static void free_vma(struct vm_area *vma)
 
 	while ((next = vma_next(vma)) && next->free) {
 		assert((vma->end) == next->start, "vma is not adjacent, ",
-			range(next->start, next->end), ", ", range(vma->start, vma->end));
+		       range(next->start, next->end), ", ",
+		       range(vma->start, vma->end));
 
 		vma->end = next->end;
 		list_remove(&next->node);
@@ -165,11 +117,13 @@ struct vm_area *alloc_vma(unsigned long len)
 				vma_buddy->start = vma->end;
 				vma_buddy->free = true;
 
-				buddy_order = ilog2(vma_length(vma_buddy) >> PAGE_SHIFT);
+				buddy_order = ilog2(vma_length(vma_buddy) >>
+						    PAGE_SHIFT);
 				assert(buddy_order <= MAX_VMA_ORDER);
 
 				list_insert(&vma->node, &vma_buddy->node);
-				list_insert(&free_vma_lists[buddy_order], &vma_buddy->free_node);
+				list_insert(&free_vma_lists[buddy_order],
+					    &vma_buddy->free_node);
 			}
 
 			list_remove(&vma->free_node);
@@ -328,5 +282,75 @@ int vmalloc_init(void)
 	vma_tree = rb_tree_create();
 	assert(vma_tree);
 
+	return 0;
+}
+
+static int dump_free_vma_lists(string *s)
+{
+	struct vm_area *vma;
+	struct list_node *list, *node;
+	unsigned int i;
+
+	for (i = 0; i <= MAX_VMA_ORDER; i++) {
+		list = &free_vma_lists[i];
+
+		if (list_empty(list))
+			continue;
+
+		ksappend_kv(s, "order:", i);
+
+		node = list->next;
+		while (node != list) {
+			vma = container_of(node, struct vm_area, free_node);
+			ksappend_str(s, " <");
+			ksappend_hex(s, vma->start);
+			ksappend_str(s, ", ");
+			ksappend_hex(s, vma->end);
+			ksappend_str(s, ">");
+			node = node->next;
+			assert(node);
+		}
+
+		ksappend_str(s, "\n");
+	}
+
+	return 0;
+}
+
+static int dump_vma_list(string *s)
+{
+	struct vm_area *vma;
+	struct list_node *node;
+
+	node = vma_list.next;
+	while (node != &vma_list) {
+		vma = container_of(node, struct vm_area, node);
+		ksappend_str(s, vma->free ? "free" : "nonfree");
+		ksappend_str(s, " <");
+		ksappend_hex(s, vma->start);
+		ksappend_str(s, ", ");
+		ksappend_hex(s, vma->end);
+		ksappend_str(s, ">");
+		ksappend_str(s, "\n");
+		node = node->next;
+	}
+
+	return 0;
+}
+
+struct file_operations free_vma_fops = {
+	.read = dump_free_vma_lists,
+};
+
+struct file_operations vma_fops = {
+	.read = dump_vma_list,
+};
+
+int vmalloc_init_late(void)
+{
+	struct file *file;
+
+	create_file("free_vma", &free_vma_fops, sys, &file);
+	create_file("vma", &vma_fops, sys, &file);
 	return 0;
 }

@@ -168,4 +168,4 @@ void kernel_map(unsigned long kva, unsigned long pa, size_t size, uint32_t flag)
 void kernel_unmap(unsigned long va, size_t size);
 void kernel_page_table_dump(unsigned long va, size_t size);
 
-void page_dump(void);
+int page_init_late(void);

@@ -88,7 +88,7 @@ void readline(string *s)
 		if (c == '\n')
 			return;
 
-		string_append_char(s, c);
+		ksappend_char(s, c);
 	}
 }
 

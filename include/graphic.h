@@ -36,5 +36,3 @@ static inline  u32 vram_height(void)
 {
 	return g_gpu.height;
 }
-
-void gpu_dump(void);

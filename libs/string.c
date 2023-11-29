@@ -9,6 +9,7 @@
 #include <vector.h>
 
 static const char *__str_hex = "0123456789abcdef";
+#define STRING_MIN_SIZE 32
 
 /* *
  * strlen - calculate the length of the string @s, not including
@@ -448,9 +449,9 @@ string *ksalloc(void)
 	if (!s)
 		return NULL;
 
-	s->str = NULL;
+	s->str = kmalloc(STRING_MIN_SIZE);
 	s->length = 0;
-	s->capacity = 0;
+	s->capacity = STRING_MIN_SIZE;
 	return s;
 }
 
@@ -490,7 +491,7 @@ static int string_try_expand(string *s, size_t size)
 	return 0;
 }
 
-int string_append_char(string *s, char c)
+int ksappend_char(string *s, char c)
 {
 	int ret;
 
@@ -504,7 +505,7 @@ int string_append_char(string *s, char c)
 	return 0;
 }
 
-int string_append_strn(string *s, const char *str, size_t length)
+int ksappend_strn(string *s, const char *str, size_t length)
 {
 	int ret;
 
@@ -521,30 +522,35 @@ int string_append_strn(string *s, const char *str, size_t length)
 	return 0;
 }
 
-int string_append_str(string *s, const char *str)
+int ksappend_str(string *s, const char *str)
 {
-	return string_append_strn(s, str, strlen(str));
+	return ksappend_strn(s, str, strlen(str));
 }
 
-int string_append(string *s, string *a)
+int ksappend(string *s, string *a)
 {
 	if (!a || !a->str)
 		return 0;
 
-	return string_append_strn(s, a->str, a->length);
+	return ksappend_strn(s, a->str, a->length);
 }
 
-int string_append_int(string *s, int val, bool hex)
+int ksappend_int(string *s, int val)
 {
 	char buf[32];
 	int length;
 
-	if (hex)
-		length = to_hex(val, buf, 32);
-	else
-		length = to_str(val, buf, 32);
+	length = to_str(val, buf, 32);
+	return ksappend_strn(s, buf, length);
+}
 
-	return string_append_strn(s, buf, length);
+int ksappend_hex(string *s, int val)
+{
+	char buf[32];
+	int length;
+
+	length = to_hex(val, buf, 32);
+	return ksappend_strn(s, buf, length);
 }
 
 /* split string and push the result to vec */
@@ -561,7 +567,7 @@ int string_split(string *s, char c, vector *vec)
 			continue;
 		}
 
-		string_append_char(sub, s->str[i]);
+		ksappend_char(sub, s->str[i]);
 	}
 
 	if (!string_empty(sub)) {

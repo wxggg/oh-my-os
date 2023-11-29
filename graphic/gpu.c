@@ -6,13 +6,14 @@
 #include <string.h>
 #include <memory.h>
 #include <assert.h>
+#include <fs.h>
 
 struct gpu_info g_gpu;
 
 static inline void assert_point(u32 x, u32 y)
 {
-	assert(x < g_gpu.width && y < g_gpu.height,
-		"invalid x=", hex(x), " y=", y);
+	assert(x < g_gpu.width && y < g_gpu.height, "invalid x=", hex(x),
+	       " y=", y);
 }
 
 static inline size_t pixel_bytes(void)
@@ -72,18 +73,34 @@ void gpu_fill_rect(u32 x1, u32 y1, u32 x2, u32 y2, color c)
 	}
 }
 
-void gpu_dump(void)
+static int gpu_dump_read(string *s)
 {
-	pr_info("screen:", dec(vram_width()), "x", dec(vram_height()), ", ",
-		"pixel bits:", dec(g_gpu.pixelbits), ", ",
-		"vram:", hex(g_gpu.vram));
+	ksappend_str(s, "screen:");
+	ksappend_int(s, vram_width());
+	ksappend_str(s, "x");
+	ksappend_int(s, vram_height());
+	ksappend_str(s, ", ");
+	ksappend_str(s, "vram:");
+	ksappend_str(s, hex(g_gpu.vram));
+
+	return 0;
 }
+
+static struct file_operations gpu_dump_fops = {
+	.read = gpu_dump_read,
+};
 
 void gpu_init(struct gpu_info *info)
 {
+	struct file *file;
+
 	memcpy(&g_gpu, info, sizeof(g_gpu));
 
-	gpu_dump();
+	pr_info("screen:", dec(vram_width()), "x", dec(vram_height()), ", ",
+		"pixel bits:", dec(g_gpu.pixelbits), ", ",
+		"vram:", hex(g_gpu.vram));
 
 	kernel_map(g_gpu.vram, g_gpu.vram, vram_size(), PTE_W);
+
+	create_file("gpu_dump", &gpu_dump_fops, sys, &file);
 }

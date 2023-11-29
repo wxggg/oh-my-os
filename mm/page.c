@@ -7,6 +7,7 @@
 #include <x86.h>
 #include <assert.h>
 #include <bitops.h>
+#include <fs.h>
 
 /* #define PAGE_DEBUG */
 
@@ -28,18 +29,6 @@ static struct list_node free_lists[MAX_ORDER + 1];
 			 " order:", dec(page->order), " flags:", hex(page->flags), \
 			 " ", is_bit_set(page->flags, PAGE_HIGHMEM) ? "highmem" : "linear"); \
 	} while (0);
-
-static void dump_free_list(void)
-{
-	unsigned int i;
-
-	pr_info("dump page free list:");
-
-	for (i = 0; i <= MAX_ORDER; i++) {
-		pr_info("\thighmem-", dec(i), " ", dec(list_size(&highmem_free_lists[i])),
-			"\tlinear-", dec(i), " ", dec(list_size(&free_lists[i])));
-	}
-}
 
 unsigned long page_to_pfn(struct page *page)
 {
@@ -208,7 +197,31 @@ void page_init(void)
 	}
 }
 
-void page_dump(void)
+static int dump_free_list(string *s)
 {
-	dump_free_list();
+	unsigned int i;
+
+	for (i = 0; i <= MAX_ORDER; i++) {
+		ksappend_kv(s, "order:", i);
+		ksappend_kv(s, " highmem-", i);
+		ksappend_kv(s, " ", list_size(&highmem_free_lists[i]));
+		ksappend_kv(s, "\t\tlinear-", i);
+		ksappend_kv(s, " ", list_size(&free_lists[i]));
+		ksappend_str(s, "\n");
+	}
+
+	return 0;
+}
+
+static struct file_operations dump_page_fops = {
+	.read = dump_free_list,
+};
+
+int page_init_late(void)
+{
+	struct file *file;
+
+	create_file("free_pages", &dump_page_fops, sys, &file);
+
+	return 0;
 }

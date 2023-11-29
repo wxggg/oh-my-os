@@ -44,33 +44,33 @@ string *get_out_string(void);
 static inline char *ch(char c)
 {
 	string *s = get_out_string();
-	string_append_char(s, c);
+	ksappend_char(s, c);
 	return s->str;
 }
 
 static inline char *__dec(long val)
 {
 	string *s = get_out_string();
-	string_append_int(s, val, false);
+	ksappend_int(s, val);
 	return s->str;
 }
 
 static inline char *__hex(unsigned long val)
 {
 	string *s = get_out_string();
-	string_append_int(s, val, true);
+	ksappend_hex(s, val);
 	return s->str;
 }
 
 static inline char *__pair(unsigned long a, unsigned long b)
 {
 	string *s = get_out_string();
-	string_append_char(s, '<');
-	string_append_int(s, a, true);
-	string_append_char(s, ',');
-	string_append_char(s, ' ');
-	string_append_int(s, b, true);
-	string_append_char(s, '>');
+	ksappend_char(s, '<');
+	ksappend_hex(s, a);
+	ksappend_char(s, ',');
+	ksappend_char(s, ' ');
+	ksappend_hex(s, b);
+	ksappend_char(s, '>');
 	return s->str;
 }
 
@@ -79,7 +79,7 @@ static inline char *__repeat(const char *str, unsigned long n)
 	string *s = get_out_string();
 
 	while (n--)
-		string_append_str(s, str);
+		ksappend_str(s, str);
 
 	return s->str;
 }

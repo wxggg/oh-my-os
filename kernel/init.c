@@ -53,28 +53,12 @@ void monitor(void)
 		if (file && file->fops->exec) {
 			file->fops->exec(vec);
 		} else {
-			pr_info("command not found: ", cmd->str);
+			pr_err("command not found: ", cmd->str);
 		}
 
 		while (!vector_empty(vec)) {
 			sub = vector_pop(vec, string *);
 			ksfree(sub);
-		}
-
-		if (!strcmp(s->str, "gpu_dump")) {
-			gpu_dump();
-		}
-
-		if (!strcmp(s->str, "vma_dump")) {
-			vma_dump();
-		}
-
-		if (!strcmp(s->str, "kmalloc_dump")) {
-			kmalloc_dump();
-		}
-
-		if (!strcmp(s->str, "page_dump")) {
-			page_dump();
 		}
 
 		if (!strcmp(s->str, "lsthreads")) {
@@ -92,6 +76,12 @@ void monitor(void)
 
 int kernel_init_late(void)
 {
+	graphic_init();
+
+	page_init_late();
+	kmalloc_init_late();
+	vmalloc_init_late();
+
 	usr_init();
 	return 0;
 }
@@ -112,8 +102,6 @@ int kern_init(void)
 	stdio_init();
 
 	irq_init();
-
-	graphic_init();
 
 	schedule_init();
 

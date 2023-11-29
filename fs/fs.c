@@ -5,6 +5,8 @@
 
 struct directory *root;
 struct directory *bin;
+struct directory *proc;
+struct directory *sys;
 
 struct file *dir_find_file(struct directory *dir, const char *name)
 {
@@ -53,6 +55,13 @@ int create_file(const char *name, struct file_operations *fops,
 	return 0;
 }
 
+int remove_file(struct file *file)
+{
+	list_remove(&file->node);
+	kfree(file);
+	return 0;
+}
+
 int create_directory(const char *name, struct directory *parent,
 		     struct directory **dir)
 {
@@ -75,10 +84,28 @@ int create_directory(const char *name, struct directory *parent,
 	return 0;
 }
 
-int remove_file(struct file *file)
+int remove_directory(struct directory *dir)
 {
-	list_remove(&file->node);
-	kfree(file);
+	struct file *file;
+	struct directory *d;
+	struct list_node *node, *head;
+
+	/* remove all sub file */
+	head = &dir->file_list;
+	for (node = head->next; node != head; node = node->next) {
+		file = container_of(node, struct file, node);
+		remove_file(file);
+	}
+
+	/* remove all sub directory */
+	head = &dir->dir_list;
+	for (node = head->next; node != head; node = node->next) {
+		d = container_of(node, struct directory, node);
+		remove_directory(d);
+	}
+
+	list_remove(&dir->node);
+	kfree(dir);
 	return 0;
 }
 
@@ -104,6 +131,22 @@ int binfs_remove_file(const char *name)
 	return remove_file(file);
 }
 
+int procfs_create_dir(const char *name, struct directory **dir)
+{
+	return create_directory(name, proc, dir);
+}
+
+int procfs_remove_dir(const char *name)
+{
+	struct directory *dir;
+
+	dir = dir_find_dir(proc, name);
+	if (!dir)
+		return -ENOENT;
+
+	return remove_directory(dir);
+}
+
 int fs_init(void)
 {
 	int ret;
@@ -113,6 +156,14 @@ int fs_init(void)
 		return ret;
 
 	ret = create_directory("bin", root, &bin);
+	if (ret)
+		return ret;
+
+	ret = create_directory("proc", root, &proc);
+	if (ret)
+		return ret;
+
+	ret = create_directory("sys", root, &sys);
 	if (ret)
 		return ret;
 

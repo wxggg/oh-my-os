@@ -15,4 +15,4 @@ static inline bool is_vmalloc_addr(unsigned long addr)
 	return addr >= VMALLOC_START && addr < VMALLOC_END;
 }
 
-void vma_dump(void);
+int vmalloc_init_late(void);
