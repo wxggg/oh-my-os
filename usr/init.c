@@ -12,5 +12,9 @@ int usr_init(void)
 	if (ret)
 		return ret;
 
+	ret = usr_thread_init();
+	if (ret)
+		return ret;
+
 	return 0;
 }

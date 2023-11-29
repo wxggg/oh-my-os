@@ -13,6 +13,7 @@
 #include <fs.h>
 #include <vector.h>
 #include <usr.h>
+#include <kernel.h>
 
 int kern_init(void) __attribute__((noreturn));
 
@@ -20,16 +21,6 @@ void reboot(void)
 {
 	pr_info("rebooting...");
 	outb(0x92, 0x3);
-}
-
-int thread_test(void *arg)
-{
-	int i;
-
-	for (i = 0; i < 10; i++)
-		pr_info("i:", dec(i));
-
-	return 0;
 }
 
 void monitor(void)
@@ -51,7 +42,7 @@ void monitor(void)
 
 		file = binfs_find_file(cmd->str);
 		if (file && file->fops->exec) {
-			file->fops->exec(vec);
+			file->fops->exec(file, vec);
 		} else {
 			pr_err("command not found: ", cmd->str);
 		}
@@ -59,14 +50,6 @@ void monitor(void)
 		while (!vector_empty(vec)) {
 			sub = vector_pop(vec, string *);
 			ksfree(sub);
-		}
-
-		if (!strcmp(s->str, "lsthreads")) {
-			list_threads();
-		}
-
-		if (!strcmp(s->str, "thread_test")) {
-			thread_run(thread_test, NULL);
 		}
 	}
 

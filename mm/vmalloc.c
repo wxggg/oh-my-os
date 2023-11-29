@@ -285,7 +285,7 @@ int vmalloc_init(void)
 	return 0;
 }
 
-static int dump_free_vma_lists(string *s)
+static int dump_free_vma_lists(struct file *file, string *s)
 {
 	struct vm_area *vma;
 	struct list_node *list, *node;
@@ -317,7 +317,7 @@ static int dump_free_vma_lists(string *s)
 	return 0;
 }
 
-static int dump_vma_list(string *s)
+static int dump_vma_list(struct file *file, string *s)
 {
 	struct vm_area *vma;
 	struct list_node *node;
@@ -350,7 +350,7 @@ int vmalloc_init_late(void)
 {
 	struct file *file;
 
-	create_file("free_vma", &free_vma_fops, sys, &file);
-	create_file("vma", &vma_fops, sys, &file);
+	create_file("free_vma", &free_vma_fops, sys, NULL, &file);
+	create_file("vma", &vma_fops, sys, NULL, &file);
 	return 0;
 }

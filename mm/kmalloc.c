@@ -195,7 +195,7 @@ void kmalloc_init(void)
 	init_kmem_cache = true;
 }
 
-static int dump_kmalloc_early(string *s)
+static int dump_kmalloc_early(struct file *file, string *s)
 {
 	u32 i, count;
 
@@ -219,7 +219,7 @@ static int dump_kmalloc_early(string *s)
 	return 0;
 }
 
-static int dump_kmalloc(string *s)
+static int dump_kmalloc(struct file *file, string *s)
 {
 	unsigned int i;
 	struct kmem_cache *kcache;
@@ -240,7 +240,8 @@ static int dump_kmalloc(string *s)
 
 		ksappend_kv(s, "size:", kcache->size);
 		ksappend_kv(s, " slabs_full:", list_size(&kcache->slabs_full));
-		ksappend_kv(s, " slabs_partial:", list_size(&kcache->slabs_partial));
+		ksappend_kv(s, " slabs_partial:",
+			    list_size(&kcache->slabs_partial));
 
 		for (node = kcache->slabs_partial.next;
 		     node != &kcache->slabs_partial; node = node->next) {
@@ -266,7 +267,8 @@ int kmalloc_init_late(void)
 {
 	struct file *file;
 
-	create_file("kmalloc", &dump_kmalloc_fops, sys, &file);
-	create_file("kmalloc-early", &dump_kmalloc_early_fops, sys, &file);
+	create_file("kmalloc", &dump_kmalloc_fops, sys, NULL, &file);
+	create_file("kmalloc-early", &dump_kmalloc_early_fops, sys, NULL,
+		    &file);
 	return 0;
 }

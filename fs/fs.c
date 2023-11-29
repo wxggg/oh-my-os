@@ -37,7 +37,7 @@ struct directory *dir_find_dir(struct directory *dir, const char *name)
 }
 
 int create_file(const char *name, struct file_operations *fops,
-		struct directory *parent, struct file **file)
+		struct directory *parent, void *priv, struct file **file)
 {
 	struct file *f;
 
@@ -48,6 +48,7 @@ int create_file(const char *name, struct file_operations *fops,
 	f->parent = parent;
 	f->name = name;
 	f->fops = fops;
+	f->priv = priv;
 
 	list_insert(&parent->file_list, &f->node);
 
@@ -115,9 +116,9 @@ struct file *binfs_find_file(const char *name)
 }
 
 int binfs_create_file(const char *name, struct file_operations *fops,
-		      struct file **file)
+		      void *priv, struct file **file)
 {
-	return create_file(name, fops, bin, file);
+	return create_file(name, fops, bin, priv, file);
 }
 
 int binfs_remove_file(const char *name)

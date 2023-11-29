@@ -2,7 +2,7 @@
 #include <fs.h>
 #include <usr.h>
 
-static int do_bt(vector *vec)
+static int do_bt(struct file *file, vector *vec)
 {
 	dump_stack();
 	return 0;
@@ -17,7 +17,7 @@ int usr_debug_init(void)
 	int ret;
 	struct file *file;
 
-	ret = binfs_create_file("bt", &debug_fops, &file);
+	ret = binfs_create_file("bt", &debug_fops, NULL, &file);
 	if (ret)
 		return ret;
 

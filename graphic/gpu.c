@@ -73,7 +73,7 @@ void gpu_fill_rect(u32 x1, u32 y1, u32 x2, u32 y2, color c)
 	}
 }
 
-static int gpu_dump_read(string *s)
+static int gpu_dump_read(struct file *file, string *s)
 {
 	ksappend_str(s, "screen:");
 	ksappend_int(s, vram_width());
@@ -102,5 +102,5 @@ void gpu_init(struct gpu_info *info)
 
 	kernel_map(g_gpu.vram, g_gpu.vram, vram_size(), PTE_W);
 
-	create_file("gpu_dump", &gpu_dump_fops, sys, &file);
+	create_file("gpu_dump", &gpu_dump_fops, sys, info, &file);
 }

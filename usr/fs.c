@@ -5,7 +5,7 @@
 
 struct directory *current_dir;
 
-static int do_ls(vector *vec)
+static int do_ls(struct file *file, vector *vec)
 {
 	struct directory *d;
 	struct file *f;
@@ -32,7 +32,7 @@ static struct file_operations ls_fops = {
 	.exec = do_ls,
 };
 
-static int do_cd(vector *vec)
+static int do_cd(struct file *file, vector *vec)
 {
 	struct directory *dir;
 	string *name;
@@ -77,10 +77,10 @@ static struct file_operations cd_fops = {
 	.exec = do_cd,
 };
 
-static int do_cat(vector *vec)
+static int do_cat(struct file *file, vector *vec)
 {
 	int ret;
-	struct file *file;
+	struct file *f;
 	string *name, *content;
 
 	if (vector_size(vec) != 2) {
@@ -90,20 +90,20 @@ static int do_cat(vector *vec)
 
 	name = vector_at(vec, string *, 1);
 
-	file = dir_find_file(current_dir, name->str);
-	if (!file) {
+	f = dir_find_file(current_dir, name->str);
+	if (!f) {
 		printk("cat: no such file ", name->str, "\n");
 		return -ENOENT;
 	}
 
-	if (!file->fops->read) {
-		printk("cat: read is not supported for ", file->name, "\n");
+	if (!f->fops->read) {
+		printk("cat: read is not supported for ", f->name, "\n");
 		return -EINVAL;
 	}
 
 	content = ksalloc();
 
-	ret = file->fops->read(content);
+	ret = f->fops->read(f, content);
 	if (ret)
 		goto err_free_content;
 
@@ -128,15 +128,15 @@ int usr_fs_init(void)
 
 	current_dir = root;
 
-	ret = binfs_create_file("ls", &ls_fops, &file);
+	ret = binfs_create_file("ls", &ls_fops, NULL, &file);
 	if (ret)
 		return ret;
 
-	ret = binfs_create_file("cd", &cd_fops, &file);
+	ret = binfs_create_file("cd", &cd_fops, NULL, &file);
 	if (ret)
 		return ret;
 
-	ret = binfs_create_file("cat", &cat_fops, &file);
+	ret = binfs_create_file("cat", &cat_fops, NULL, &file);
 	if (ret)
 		return ret;
 

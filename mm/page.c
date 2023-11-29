@@ -197,7 +197,7 @@ void page_init(void)
 	}
 }
 
-static int dump_free_list(string *s)
+static int dump_free_list(struct file *file, string *s)
 {
 	unsigned int i;
 
@@ -221,7 +221,7 @@ int page_init_late(void)
 {
 	struct file *file;
 
-	create_file("free_pages", &dump_page_fops, sys, &file);
+	create_file("free_pages", &dump_page_fops, sys, NULL, &file);
 
 	return 0;
 }

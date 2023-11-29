@@ -3,6 +3,7 @@
 #include <list.h>
 #include <irq.h>
 #include <string.h>
+#include <fs.h>
 
 struct thread_context {
 	uint32_t eip;
@@ -33,6 +34,10 @@ struct thread {
 	struct thread_context context;
 	struct list_node node;
 	struct list_node sched_node;
+
+	struct directory *dir;
+	struct file *f_state;
+	struct file *f_context;
 };
 
 struct process {
