@@ -11,9 +11,12 @@
 #include <schedule.h>
 #include <assert.h>
 
-#define E820_MAX	20
-#define E820_RAM	1
-#define E820_RSV	2
+#define MODULE "memory"
+#define MODULE_DEBUG 0
+
+#define E820_MAX 20
+#define E820_RAM 1
+#define E820_RSV 2
 
 struct e820_map {
 	uint64_t addr;
@@ -31,25 +34,23 @@ struct e820 {
 };
 
 struct seg_desc {
-        unsigned lim_15_0 : 16;
-        unsigned base_15_0 : 16;
-        unsigned base_23_16 : 8;
-        unsigned type : 4;
-        unsigned s : 1;
-        unsigned dpl : 2;
-        unsigned present : 1;
-        unsigned lim_19_16 : 4;
-        unsigned avl : 1;
-        unsigned l : 1;
-        unsigned db : 1;
-        unsigned gran : 1;
-        unsigned base_31_24 : 8;
+	unsigned lim_15_0 : 16;
+	unsigned base_15_0 : 16;
+	unsigned base_23_16 : 8;
+	unsigned type : 4;
+	unsigned s : 1;
+	unsigned dpl : 2;
+	unsigned present : 1;
+	unsigned lim_19_16 : 4;
+	unsigned avl : 1;
+	unsigned l : 1;
+	unsigned db : 1;
+	unsigned gran : 1;
+	unsigned base_31_24 : 8;
 };
 
 static struct seg_desc gdt[SEG_MAX] = { 0 };
-static struct pseudodesc gdt_desc = {
-	sizeof(gdt) - 1, (uintptr_t)gdt
-};
+static struct pseudodesc gdt_desc = { sizeof(gdt) - 1, (uintptr_t)gdt };
 
 #define IO_BASE 0xf0000000
 #define VPT 0xfac00000
@@ -60,20 +61,19 @@ unsigned long highmem_start_pfn, highmem_end_pfn;
 
 static const char *e820_type_str(unsigned int type)
 {
-	switch (type)
-	{
-		case E820_RAM:
-			return "System RAM";
-		case E820_RSV:
-			return "Reserved";
-		default:
-			return "Unknown type";
+	switch (type) {
+	case E820_RAM:
+		return "System RAM";
+	case E820_RSV:
+		return "Reserved";
+	default:
+		return "Unknown type";
 	}
 }
 
 static void scan_memory_slot(void)
 {
-	struct e820 *e820 = (struct e820 *) phys_to_virt(0x8000);
+	struct e820 *e820 = (struct e820 *)phys_to_virt(0x8000);
 	struct e820_map *map;
 	extern char end[];
 	unsigned long free_end_pfn;
@@ -89,7 +89,7 @@ static void scan_memory_slot(void)
 
 		if (map->type == E820_RAM) {
 			if (map->addr < virt_to_phys(end) &&
-					virt_to_phys(end) < (map->addr + map->size)) {
+			    virt_to_phys(end) < (map->addr + map->size)) {
 				index = i;
 			}
 		}
@@ -114,9 +114,10 @@ static void scan_memory_slot(void)
 		linear_end_pfn = highmem_start_pfn;
 	}
 
-	pr_info("kernel pfn range: ", range(kernel_start_pfn, kernel_end_pfn),
-		", linear pfn range: ", range(kernel_end_pfn, highmem_start_pfn),
-		", highmem pfn range: ", range(highmem_start_pfn, highmem_end_pfn));
+	pr_info("physical memory frame number ranges:");
+	pr_info("kernel:\t", range(kernel_start_pfn, kernel_end_pfn));
+	pr_info("linear:\t", range(kernel_end_pfn, highmem_start_pfn));
+	pr_info("highmem:\t", range(highmem_start_pfn, highmem_end_pfn));
 
 	add_free_pages(kernel_end_pfn, free_end_pfn);
 
@@ -143,7 +144,7 @@ static void seg_init(struct seg_desc *seg, u8 type, u32 base, u32 limit,
 	seg->dpl = dpl;
 	seg->present = 1;
 	seg->lim_19_16 = (limit >> 16) & 0xf;
-	seg->avl =  0;
+	seg->avl = 0;
 	seg->l = 0;
 	seg->db = 1; /* 32-bit segment */
 	seg->gran = gran;
@@ -152,19 +153,20 @@ static void seg_init(struct seg_desc *seg, u8 type, u32 base, u32 limit,
 
 static void gdt_init(void)
 {
-	seg_init(&gdt[SEG_KTEXT], STA_X | STA_R, 0x0, 0xFFFFFFFF, DPL_KERNEL, 1);
-	seg_init(&gdt[SEG_KDATA], STA_W,         0x0, 0xFFFFFFFF, DPL_KERNEL, 1);
+	seg_init(&gdt[SEG_KTEXT], STA_X | STA_R, 0x0, 0xFFFFFFFF, DPL_KERNEL,
+		 1);
+	seg_init(&gdt[SEG_KDATA], STA_W, 0x0, 0xFFFFFFFF, DPL_KERNEL, 1);
 	seg_init(&gdt[SEG_UTEXT], STA_X | STA_R, 0x0, 0xFFFFFFFF, DPL_USER, 1);
-	seg_init(&gdt[SEG_UDATA], STA_W,         0x0, 0xFFFFFFFF, DPL_USER, 1);
+	seg_init(&gdt[SEG_UDATA], STA_W, 0x0, 0xFFFFFFFF, DPL_USER, 1);
 
-	asm volatile ("lgdt (%0)" :: "r" (&gdt_desc));
-	asm volatile ("movw %%ax, %%gs" :: "a" (USER_DS));
-	asm volatile ("movw %%ax, %%fs" :: "a" (USER_DS));
-	asm volatile ("movw %%ax, %%es" :: "a" (KERNEL_DS));
-	asm volatile ("movw %%ax, %%ds" :: "a" (KERNEL_DS));
-	asm volatile ("movw %%ax, %%ss" :: "a" (KERNEL_DS));
+	asm volatile("lgdt (%0)" ::"r"(&gdt_desc));
+	asm volatile("movw %%ax, %%gs" ::"a"(USER_DS));
+	asm volatile("movw %%ax, %%fs" ::"a"(USER_DS));
+	asm volatile("movw %%ax, %%es" ::"a"(KERNEL_DS));
+	asm volatile("movw %%ax, %%ds" ::"a"(KERNEL_DS));
+	asm volatile("movw %%ax, %%ss" ::"a"(KERNEL_DS));
 	/* reload cs */
-	asm volatile ("ljmp %0, $1f\n 1:\n" :: "i" (KERNEL_CS));
+	asm volatile("ljmp %0, $1f\n 1:\n" ::"i"(KERNEL_CS));
 }
 
 void kernel_map(unsigned long va, unsigned long pa, size_t size, uint32_t flag)
@@ -214,7 +216,7 @@ void memory_init(void)
 
 	enable_paging(cr3);
 
-        gdt_init();
+	gdt_init();
 
 	mm->pgdir[0] = 0;
 

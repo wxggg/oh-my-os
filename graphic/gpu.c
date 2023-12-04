@@ -8,6 +8,9 @@
 #include <assert.h>
 #include <fs.h>
 
+#define MODULE "gpu"
+#define MODULE_DEBUG 0
+
 struct gpu_info g_gpu;
 
 static inline void assert_point(u32 x, u32 y)

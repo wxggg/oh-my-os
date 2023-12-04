@@ -1,6 +1,10 @@
 #include <stdio.h>
 #include <memory.h>
 #include <graphic.h>
+#include <debug.h>
+
+#define MODULE "graphic"
+#define MODULE_DEBUG 1
 
 void graphic_init(void)
 {

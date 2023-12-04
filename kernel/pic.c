@@ -1,7 +1,10 @@
 #include <types.h>
 #include <x86.h>
-#include <stdio.h>
+#include <debug.h>
 #include <irq.h>
+
+#define MODULE "PIC"
+#define MODULE_DEBUG 0
 
 #define ICW1_ICW4		0x01		/* ICW4 (not) needed */
 #define ICW1_SINGLE		0x02		/* Single (cascade) mode */

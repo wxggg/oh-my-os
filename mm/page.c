@@ -9,11 +9,12 @@
 #include <bitops.h>
 #include <fs.h>
 
-/* #define PAGE_DEBUG */
-
 /* use buddy algorithm to allocate free pages,
  * support physical address up to 4GB, totally 1024 * 1024 pages.
  */
+
+#define MODULE "page"
+#define MODULE_DEBUG 0
 
 #define TOTAL_PAGES (1024 * 1024)
 #define MAX_ORDER 10

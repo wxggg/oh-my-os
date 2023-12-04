@@ -3,6 +3,9 @@
 #include <kmalloc.h>
 #include <queue.h>
 
+#define MODULE "queue"
+#define MODULE_DEBUG 0
+
 #define MIN_CAPACITY 8
 
 queue *__queue_create(size_t element_size)
@@ -41,7 +44,7 @@ void __queue_rear(queue *que, void *ele)
 {
 	assert(que->rear < que->capacity);
 	memcpy(ele, __ele(que, (que->rear + que->capacity - 1) % que->capacity),
-		que->element_size);
+	       que->element_size);
 }
 
 int __queue_expand(queue *que)
@@ -61,7 +64,8 @@ int __queue_expand(queue *que)
 		memcpy(new_base, __ele(que, que->front),
 		       (que->capacity - que->front) * que->element_size);
 
-		memcpy(new_base + (que->capacity - que->front) * que->element_size,
+		memcpy(new_base +
+			       (que->capacity - que->front) * que->element_size,
 		       que->base, que->rear * que->element_size);
 	}
 

@@ -3,7 +3,7 @@
 #include <string.h>
 #include <queue.h>
 
-#define STDIO_MAX_ARGS 	32
+#define STDIO_MAX_ARGS 32
 
 static string g_out_string[STDIO_MAX_ARGS];
 static char g_out_buf[STDIO_MAX_ARGS][128];
@@ -18,11 +18,14 @@ string *get_out_string(void)
 	string *s;
 	index = (index + 1) % STDIO_MAX_ARGS;
 	s = &g_out_string[index];
-	string_init(s, &g_out_buf[index][0], 128);
+	ksinit(s, &g_out_buf[index][0], 128);
 	return s;
 }
 
-void putchar(int ch) { serial_putc(ch); }
+void putchar(int ch)
+{
+	serial_putc(ch);
+}
 
 int puts(const char *str)
 {

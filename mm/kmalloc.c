@@ -7,6 +7,9 @@
 #include <fs.h>
 #include <kernel.h>
 
+#define MODULE "kmalloc"
+#define MODULE_DEBUG 0
+
 struct block {
 	unsigned int order;
 	struct list_node node;

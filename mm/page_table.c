@@ -4,8 +4,10 @@
 #include <memory.h>
 #include <vmalloc.h>
 #include <register.h>
+#include <debug.h>
 
-/* #define PAGE_TABLE_DEBUG */
+#define MODULE "page table"
+#define MODULE_DEBUG 0
 
 static inline void tlb_invalidate(unsigned long *pgdir, unsigned long va)
 {
@@ -16,9 +18,9 @@ static inline void tlb_invalidate(unsigned long *pgdir, unsigned long va)
 /*
  * get_pte - if pte not exist, allocate a new page
  */
-static unsigned long* get_pte(unsigned long *pgdir, unsigned long va)
+static unsigned long *get_pte(unsigned long *pgdir, unsigned long va)
 {
-	unsigned long* pde = pgdir + pde_index(va);
+	unsigned long *pde = pgdir + pde_index(va);
 	struct page *page;
 	unsigned long page_pa;
 	unsigned long *pt;
@@ -35,12 +37,13 @@ static unsigned long* get_pte(unsigned long *pgdir, unsigned long va)
 	return pt + pte_index(va);
 }
 
-void set_pde(unsigned long* pde, unsigned long pa, uint32_t flag)
+void set_pde(unsigned long *pde, unsigned long pa, uint32_t flag)
 {
 	*pde = pa | flag | PDE_P;
 }
 
-void page_map(unsigned long *pgdir, unsigned long va, unsigned long pa, size_t size, uint32_t flag)
+void page_map(unsigned long *pgdir, unsigned long va, unsigned long pa,
+	      size_t size, uint32_t flag)
 {
 	unsigned long *pte;
 	unsigned long end;
@@ -49,9 +52,7 @@ void page_map(unsigned long *pgdir, unsigned long va, unsigned long pa, size_t s
 	pa = round_down_page(pa);
 	end = round_up_page(va + size);
 
-#ifdef PAGE_TABLE_DEBUG
 	pr_debug("map: <", hex(va), "->", hex(pa), "> size:", hex(size));
-#endif
 
 	while (va < end) {
 		pte = get_pte(pgdir, va);
@@ -71,9 +72,7 @@ void page_unmap(unsigned long *pgdir, unsigned long va, size_t size)
 	va = round_down_page(va);
 	end = round_up_page(va + size);
 
-#ifdef PAGE_TABLE_DEBUG
 	pr_debug("unmap: ", range(va, end));
-#endif
 
 	while (va < end) {
 		pte = get_pte(pgdir, va);
@@ -100,7 +99,8 @@ void page_table_dump(unsigned long *pgdir, unsigned long va, size_t size)
 			continue;
 
 		pt = (void *)phys_to_virt(page_base(pde));
-		printk("|-[", dec(i), "] va_base:", hex(va_base), " -> pde:", hex(pde), "\n");
+		printk("|-[", dec(i), "] va_base:", hex(va_base),
+		       " -> pde:", hex(pde), "\n");
 
 		for (j = 0; j < 1 << 10; j++) {
 			pte = pt[j];
@@ -108,7 +108,8 @@ void page_table_dump(unsigned long *pgdir, unsigned long va, size_t size)
 				continue;
 
 			pte_va = va_base + j * PAGE_SIZE;
-			printk("\t|-[", dec(j), "] va:", hex(pte_va), " -> pte:", hex(pte), "\n");
+			printk("\t|-[", dec(j), "] va:", hex(pte_va),
+			       " -> pte:", hex(pte), "\n");
 		}
 	}
 }
@@ -119,7 +120,8 @@ void enable_paging(unsigned long cr3)
 
 	lcr3(cr3);
 	cr0 = rcr0();
-	cr0 |= CR0_PE | CR0_PG | CR0_AM | CR0_WP | CR0_NE | CR0_TS | CR0_EM | CR0_MP;
+	cr0 |= CR0_PE | CR0_PG | CR0_AM | CR0_WP | CR0_NE | CR0_TS | CR0_EM |
+	       CR0_MP;
 	cr0 &= ~(CR0_TS | CR0_EM);
 	lcr0(cr0);
 }

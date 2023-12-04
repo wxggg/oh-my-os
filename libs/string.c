@@ -8,6 +8,9 @@
 #include <log2.h>
 #include <vector.h>
 
+#define MODULE "string"
+#define MODULE_DEBUG 0
+
 static const char *__str_hex = "0123456789abcdef";
 #define STRING_MIN_SIZE 32
 
@@ -420,21 +423,20 @@ int to_hex(unsigned int val, char *buf, int len)
 	buf[i++] = '0';
 	buf[i++] = 'x';
 
-	if (val == 0) {
-		buf[i++] = '0';
-		return i;
-	}
-
 	while (val > 0) {
 		buf[i++] = __str_hex[val % 16];
 		val /= 16;
+	}
+
+	while (i < 10) {
+		buf[i++] = '0';
 	}
 
 	reverse_str(buf, 2, i - 1);
 	return i;
 }
 
-void string_init(string *s, char *buf, size_t size)
+void ksinit(string *s, char *buf, size_t size)
 {
 	s->str = buf;
 	s->length = 0;
@@ -450,6 +452,12 @@ string *ksalloc(void)
 		return NULL;
 
 	s->str = kmalloc(STRING_MIN_SIZE);
+	if (!s->str) {
+		kfree(s);
+		return NULL;
+	}
+
+	s->str[0] = 0;
 	s->length = 0;
 	s->capacity = STRING_MIN_SIZE;
 	return s;
@@ -483,6 +491,7 @@ static int string_try_expand(string *s, size_t size)
 
 	if (s->str) {
 		strncpy(str, s->str, s->length);
+		s->str[s->length] = 0;
 		kfree(s->str);
 	}
 
@@ -503,6 +512,19 @@ int ksappend_char(string *s, char c)
 	s->length++;
 	s->str[s->length] = 0;
 	return 0;
+}
+
+char kspop_char(string *s)
+{
+	char c;
+
+	if (!s->length)
+		return 0;
+
+	c = s->str[s->length - 1];
+	s->length--;
+	s->str[s->length] = 0;
+	return c;
 }
 
 int ksappend_strn(string *s, const char *str, size_t length)
@@ -554,7 +576,7 @@ int ksappend_hex(string *s, int val)
 }
 
 /* split string and push the result to vec */
-int string_split(string *s, char c, vector *vec)
+int kssplit(string *s, char c, vector *vec)
 {
 	int i;
 	string *sub;
@@ -562,7 +584,7 @@ int string_split(string *s, char c, vector *vec)
 	sub = ksalloc();
 	for (i = 0; i < s->length; i++) {
 		if (s->str[i] == c) {
-			vector_push(vec, string *,  sub);
+			vector_push(vec, string *, sub);
 			sub = ksalloc();
 			continue;
 		}
@@ -576,5 +598,22 @@ int string_split(string *s, char c, vector *vec)
 		ksfree(sub);
 	}
 
+	return 0;
+}
+
+int ksfit(string *s, char c, int n)
+{
+	int ret;
+
+	ret = string_try_expand(s, n);
+	if (ret)
+		return ret;
+
+	while (s->length < n) {
+		s->str[s->length++] = c;
+	}
+
+	s->str[n] = 0;
+	s->length = n;
 	return 0;
 }

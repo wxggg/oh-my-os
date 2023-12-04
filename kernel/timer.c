@@ -16,6 +16,10 @@
 #include <stdio.h>
 #include <x86.h>
 #include <schedule.h>
+#include <debug.h>
+
+#define MODULE "timer"
+#define MODULE_DEBUG 0
 
 #define IO_TIMER     0x40
 #define IO_TIMER_CMD 0x43

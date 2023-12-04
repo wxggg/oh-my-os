@@ -9,6 +9,10 @@
 #include <error.h>
 #include <mm.h>
 #include <fs.h>
+#include <debug.h>
+
+#define MODULE "vmalloc"
+#define MODULE_DEBUG 0
 
 #define MAX_VMA_ORDER 20
 
@@ -185,7 +189,7 @@ void *__vmalloc(gfp_t gfp_mask, size_t size)
 	struct page **pages;
 	unsigned long nr_pages;
 
-	warn_on(size < PAGE_SIZE, " allocate size=", dec(size), " < PAGE_SIZE");
+	WARN_ON(size < PAGE_SIZE, " allocate size=", dec(size), " < PAGE_SIZE");
 
 	size = round_up_page(size);
 

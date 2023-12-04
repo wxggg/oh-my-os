@@ -38,9 +38,10 @@ static inline bool string_empty(string *s)
 
 string *ksalloc(void);
 void ksfree(string *s);
-void string_init(string *s, char *buf, size_t size);
+void ksinit(string *s, char *buf, size_t size);
 
 int ksappend_char(string *s, char c);
+char kspop_char(string *s);
 int ksappend_strn(string *s, const char *str, size_t length);
 int ksappend_str(string *s, const char *str);
 int ksappend(string *s, string *a);
@@ -61,4 +62,5 @@ static inline int ksappend_kvx(string *s, const char *key, int val)
 	return 0;
 }
 
-int string_split(string *s, char c, vector *vec);
+int kssplit(string *s, char c, vector *vec);
+int ksfit(string *s, char c, int n);

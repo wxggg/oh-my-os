@@ -7,6 +7,9 @@
 #include <keyboard.h>
 #include <register.h>
 
+#define MODULE "irq"
+#define MODULE_DEBUG 0
+
 struct gate_desc {
 	unsigned offset_15_0 : 16;
 	unsigned selector : 16;

@@ -6,13 +6,11 @@
 #include <rb_tree.h>
 #include <assert.h>
 
-#define TREE_DEBUG
+#define MODULE "rb tree"
+#define MODULE_DEBUG 0
 
 struct rb_node {
-#ifdef TREE_DEBUG
 	unsigned long id;
-#endif
-
 	unsigned long start;
 	unsigned long end;
 	void *value;
@@ -24,19 +22,14 @@ struct rb_node {
 };
 
 struct rb_tree {
-#ifdef TREE_DEBUG
 	unsigned long total;
-#endif
 	struct rb_node *root;
 };
 
-
-#ifdef TREE_DEBUG
 static inline unsigned long node_id(struct rb_node *node)
 {
 	return node ? node->id : 0;
 }
-#endif
 
 static inline void set_red(struct rb_node *node)
 {
@@ -75,7 +68,6 @@ void *rb_node_value(struct rb_node *node)
 	return node->value;
 }
 
-#ifdef TREE_DEBUG
 static void node_validate(struct rb_node *node)
 {
 	if (!node)
@@ -103,11 +95,11 @@ static void tree_dump(struct rb_node *node, uint32_t level)
 	tree_dump(node->right, level + 1);
 
 	pr_info(repeat("    ", level),
-	        node->parent ? (node == node->parent->left ? "\\" : "/") : "<",
-		"----",
-		"(", dec(node_id(node)), ", ", is_red(node) ? "r" : "b", ") ",
-		"<", dec(node_id(node->parent)), ",", dec(node_id(node->left)), ",",
-		dec(node_id(node->right)), "> ", range(node->start, node->end));
+		node->parent ? (node == node->parent->left ? "\\" : "/") : "<",
+		"----", "(", dec(node_id(node)), ", ", is_red(node) ? "r" : "b",
+		") ", "<", dec(node_id(node->parent)), ",",
+		dec(node_id(node->left)), ",", dec(node_id(node->right)), "> ",
+		range(node->start, node->end));
 
 	tree_dump(node->left, level + 1);
 }
@@ -157,9 +149,8 @@ static void rb_tree_validate(struct rb_tree *tree)
 		assert(0);
 	}
 }
-#endif
 
-struct rb_node * rb_tree_search(struct rb_tree *tree, unsigned long key)
+struct rb_node *rb_tree_search(struct rb_tree *tree, unsigned long key)
 {
 	struct rb_node *node = tree->root;
 	while (node) {
@@ -258,8 +249,8 @@ static void insert_fixup(struct rb_node **root, struct rb_node *nodex)
 	set_black(*root);
 }
 
-struct rb_node * rb_tree_insert(struct rb_tree *tree, unsigned long start,
-				unsigned long end, void *value)
+struct rb_node *rb_tree_insert(struct rb_tree *tree, unsigned long start,
+			       unsigned long end, void *value)
 {
 	struct rb_node *node, *parent, *new_node;
 
@@ -282,13 +273,11 @@ struct rb_node * rb_tree_insert(struct rb_tree *tree, unsigned long start,
 		}
 	}
 
-	new_node = (struct rb_node *) kmalloc(sizeof(struct rb_node));
+	new_node = (struct rb_node *)kmalloc(sizeof(struct rb_node));
 	if (!new_node)
 		return NULL;
 
-#ifdef TREE_DEBUG
 	new_node->id = tree->total++;
-#endif
 	new_node->start = start;
 	new_node->end = end;
 	new_node->parent = parent;
@@ -310,9 +299,7 @@ struct rb_node * rb_tree_insert(struct rb_tree *tree, unsigned long start,
 
 	insert_fixup(&tree->root, new_node);
 
-#ifdef TREE_DEBUG
 	rb_tree_validate(tree);
-#endif
 	return new_node;
 
 fail:
@@ -320,7 +307,8 @@ fail:
 	return NULL;
 }
 
-static void remove_fixup(struct rb_node **root, struct rb_node *parent, struct rb_node *nodex)
+static void remove_fixup(struct rb_node **root, struct rb_node *parent,
+			 struct rb_node *nodex)
 {
 	struct rb_node *nodey;
 
@@ -338,12 +326,13 @@ static void remove_fixup(struct rb_node **root, struct rb_node *parent, struct r
 					nodey = parent->right;
 				}
 
-				if (!nodey ||
-				    (is_black(nodey->left) && is_black(nodey->right))) {
+				if (!nodey || (is_black(nodey->left) &&
+					       is_black(nodey->right))) {
 					set_red(nodey);
 					nodex = parent;
 				} else {
-					if (is_red(nodey->left) && is_black(nodey->right)) {
+					if (is_red(nodey->left) &&
+					    is_black(nodey->right)) {
 						set_red(nodey);
 						set_black(nodey->left);
 						rotate_right(root, nodey);
@@ -367,11 +356,13 @@ static void remove_fixup(struct rb_node **root, struct rb_node *parent, struct r
 					nodey = parent->left;
 				}
 
-				if (!nodey || (is_black(nodey->left) && is_black(nodey->right))) {
+				if (!nodey || (is_black(nodey->left) &&
+					       is_black(nodey->right))) {
 					set_red(nodey);
 					nodex = parent;
 				} else {
-					if (is_red(nodey->right) && is_black(nodey->left)) {
+					if (is_red(nodey->right) &&
+					    is_black(nodey->left)) {
 						set_red(nodey);
 						set_black(nodey->right);
 						rotate_left(root, nodey);
@@ -459,23 +450,19 @@ int rb_tree_remove(struct rb_tree *tree, unsigned long key)
 
 	kfree(nodez);
 
-#ifdef TREE_DEBUG
 	rb_tree_validate(tree);
-#endif
 	return 0;
 }
 
-struct rb_tree * rb_tree_create(void)
+struct rb_tree *rb_tree_create(void)
 {
 	struct rb_tree *tree;
 
-	tree = (struct rb_tree *) kmalloc(sizeof(*tree));
+	tree = (struct rb_tree *)kmalloc(sizeof(*tree));
 	if (!tree)
 		return NULL;
 
-#ifdef TREE_DEBUG
 	tree->total = 0;
-#endif
 	tree->root = NULL;
 	return tree;
 }
@@ -499,7 +486,8 @@ void rb_tree_delete(struct rb_tree *tree)
 	kfree(tree);
 }
 
-static int tree_iterate(struct rb_node *node, rb_tree_pfn_callback callback, void *priv)
+static int tree_iterate(struct rb_node *node, rb_tree_pfn_callback callback,
+			void *priv)
 {
 	int ret;
 
@@ -521,7 +509,8 @@ static int tree_iterate(struct rb_node *node, rb_tree_pfn_callback callback, voi
 	return ret;
 }
 
-int rb_tree_iterate(struct rb_tree *tree, rb_tree_pfn_callback callback, void *priv)
+int rb_tree_iterate(struct rb_tree *tree, rb_tree_pfn_callback callback,
+		    void *priv)
 {
 	return tree_iterate(tree->root, callback, priv);
 }

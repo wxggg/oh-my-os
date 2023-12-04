@@ -15,6 +15,9 @@
 #include <usr.h>
 #include <kernel.h>
 
+#define MODULE "init"
+#define MODULE_DEBUG 0
+
 int kern_init(void) __attribute__((noreturn));
 
 void reboot(void)
@@ -36,7 +39,7 @@ void monitor(void)
 		if (!s->str || !s->length)
 			continue;
 
-		string_split(s, ' ', vec);
+		kssplit(s, ' ', vec);
 
 		cmd = vector_at(vec, string *, 0);
 
@@ -44,7 +47,7 @@ void monitor(void)
 		if (file && file->fops->exec) {
 			file->fops->exec(file, vec);
 		} else {
-			pr_err("command not found: ", cmd->str);
+			printk("command not found: ", cmd->str, "\n");
 		}
 
 		while (!vector_empty(vec)) {

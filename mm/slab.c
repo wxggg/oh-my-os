@@ -5,6 +5,9 @@
 #include <vmalloc.h>
 #include <bitops.h>
 
+#define MODULE "slab"
+#define MODULE_DEBUG 0
+
 static inline void *index_to_obj(struct kmem_cache *cache, struct page *page,
 				 unsigned int idx)
 {

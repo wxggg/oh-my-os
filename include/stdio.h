@@ -5,8 +5,6 @@
 #include <kernel.h>
 #include <queue.h>
 
-#define PR_DEBUG
-
 int serial_received();
 void serial_init(void);
 void serial_putc(int ch);
@@ -24,20 +22,11 @@ void stdio_init(void);
 
 extern const char line_end[1];
 int print_args(const char *end, ...);
-#define printk(...)  print_args(line_end, ##__VA_ARGS__, line_end)
-#define printk_tick(...)  printk("[", dec(tick() / 100), ".", dec(tick() % 100), "] ", __VA_ARGS__)
-#define pr_info(...) printk_tick(__VA_ARGS__, "\n")
-#define pr_err(...) printk_tick(__VA_ARGS__, "\n")
+int print_debug(const char *module, const char *debug, const char *end, ...);
 
-#define pr_err_debug(...)  printk_tick("[", __FILE__, ":", dec(__LINE__), "] <error> ", __func__, ": ",\
-		__VA_ARGS__, "\n")
-
-#ifdef PR_DEBUG
-#define pr_debug(...)  printk_tick("[", __FILE__, ":", dec(__LINE__), "] <debug> ", __func__, ": ",\
-		__VA_ARGS__, "\n")
-#else
-#define pr_debug(...)
-#endif
+#define printk(...) print_args(line_end, ##__VA_ARGS__, line_end)
+#define printk_debug(module, debug, ...) \
+	print_debug(module, debug, line_end, ##__VA_ARGS__, line_end)
 
 string *get_out_string(void);
 

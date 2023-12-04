@@ -3,6 +3,9 @@
 #include <kmalloc.h>
 #include <vector.h>
 
+#define MODULE "vector"
+#define MODULE_DEBUG 0
+
 #define MIN_CAPACITY 8
 
 vector *__vector_create(size_t element_size)
