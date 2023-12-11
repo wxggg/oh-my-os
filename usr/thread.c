@@ -1,6 +1,11 @@
 #include <fs.h>
 #include <schedule.h>
 #include <stdio.h>
+#include <kmalloc.h>
+#include <debug.h>
+
+#define MODULE "thread"
+#define MODULE_DEBUG 1
 
 static int test_thread(void *arg)
 {

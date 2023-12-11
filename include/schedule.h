@@ -50,6 +50,6 @@ int schedule_init(void);
 void schedule(void);
 
 struct thread *thread_run(int (*fn)(void *), void *arg);
-void list_threads(void);
+void thread_exit(int err);
 
 extern struct thread *current;

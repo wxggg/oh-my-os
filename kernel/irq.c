@@ -6,6 +6,8 @@
 #include <debug.h>
 #include <keyboard.h>
 #include <register.h>
+#include <schedule.h>
+#include <usr.h>
 
 #define MODULE "irq"
 #define MODULE_DEBUG 0
@@ -23,14 +25,14 @@ struct gate_desc {
 };
 
 static struct gate_desc idt_array[IRQ_NUM] = { 0 };
-static struct pseudodesc idt_pd = {
-	sizeof(idt_array) -1, (uintptr_t)idt_array
-};
+static struct pseudodesc idt_pd = { sizeof(idt_array) - 1,
+				    (uintptr_t)idt_array };
 
 static irq_handler_t irq_handlers[IRQ_NUM];
 
 static void set_gate(struct gate_desc *gate, unsigned long istrap,
-		unsigned long selector, unsigned long offset, unsigned long dpl)
+		     unsigned long selector, unsigned long offset,
+		     unsigned long dpl)
 {
 	gate->offset_15_0 = offset & 0xffff;
 	gate->selector = selector;
@@ -47,15 +49,11 @@ void idt_init(void)
 {
 	extern uintptr_t __vectors[];
 
-	for(int i = 0; i < 37; i++) {
-		set_gate(&idt_array[i], 0, GD_KTEXT,
-			 __vectors[i], DPL_KERNEL);
-	}
+	for (int i = 0; i < 37; i++)
+		set_gate(&idt_array[i], 0, GD_KTEXT, __vectors[i], DPL_KERNEL);
 
-	for(int i = 37; i < 256; i++) {
-		set_gate(&idt_array[i], 0, GD_KTEXT,
-			 __vectors[36], DPL_KERNEL);
-	}
+	for (int i = 37; i < 256; i++)
+		set_gate(&idt_array[i], 0, GD_KTEXT, __vectors[36], DPL_KERNEL);
 
 	lidt(&idt_pd);
 	pr_info("idt init success");
@@ -97,25 +95,25 @@ void irq_handler(struct trapframe *tf)
 		return;
 	}
 
-	switch (tf->irq)
-	{
-		case IRQ_GP:
-			pr_err("General protection fault");
-			dump_trapframe(tf);
-			monitor();
-			break;
-		case IRQ_PGFLT:
-			pr_err("Unable to handle kernel NULL pointer "
-			       "dereference at virtual address ", hex(rcr2()));
-			dump_trapframe(tf);
-			monitor();
-			break;
-		default:
-			pr_err("trap: unknown irq ", dec(tf->irq));
-			dump_trapframe(tf);
-			monitor();
-			break;
+	switch (tf->irq) {
+	case IRQ_GP:
+		pr_err("General protection fault");
+		break;
+	case IRQ_PGFLT:
+		pr_err("Unable to handle kernel NULL pointer dereference at virtual address ",
+		       hex(rcr2()));
+		break;
+	default:
+		pr_err("trap: unknown irq ", dec(tf->irq));
+		break;
 	}
+
+	dump_trapframe(tf);
+
+	if (current == shell)
+		start_new_shell();
+
+	thread_exit(tf->err);
 }
 
 int request_irq(u16 irq, irq_handler_t fn)

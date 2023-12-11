@@ -153,10 +153,6 @@ int print_debug(const char *module, const char *debug, const char *end, ...)
 	int n = 0;
 	int ret = 0;
 
-	/* assert(dmesg_s); */
-	/* assert(line); */
-	/* assert(s); */
-
 	line.length = 0;
 	s.length = 0;
 

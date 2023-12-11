@@ -26,40 +26,6 @@ void reboot(void)
 	outb(0x92, 0x3);
 }
 
-void monitor(void)
-{
-	struct file *file;
-	vector *vec = vector_create(string *);
-	string *s = ksalloc();
-	string *sub, *cmd;
-
-	while (1) {
-		readline(s);
-
-		if (!s->str || !s->length)
-			continue;
-
-		kssplit(s, ' ', vec);
-
-		cmd = vector_at(vec, string *, 0);
-
-		file = binfs_find_file(cmd->str);
-		if (file && file->fops->exec) {
-			file->fops->exec(file, vec);
-		} else {
-			printk("command not found: ", cmd->str, "\n");
-		}
-
-		while (!vector_empty(vec)) {
-			sub = vector_pop(vec, string *);
-			ksfree(sub);
-		}
-	}
-
-	ksfree(s);
-	__vector_destroy(vec);
-}
-
 int kernel_init_late(void)
 {
 	graphic_init();
@@ -68,7 +34,6 @@ int kernel_init_late(void)
 	kmalloc_init_late();
 	vmalloc_init_late();
 
-	usr_init();
 	return 0;
 }
 
@@ -97,7 +62,9 @@ int kern_init(void)
 
 	kernel_init_late();
 
+	usr_init();
+
 	while (1) {
-		monitor();
+		schedule();
 	}
 }
