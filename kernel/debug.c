@@ -159,13 +159,8 @@ int print_debug(const char *module, const char *debug, const char *end, ...)
 	ksappend_str(&s, module);
 	ksfit(&s, ' ', 10);
 
-	ksappend_kv(&line, "[", tick() / 100);
-	ksappend_kv(&line, ".", tick() % 100);
-	ksappend_str(&line, "\t][");
-	ksappend_str(&line, s.str);
-	ksappend_str(&line, "][");
-	ksappend_str(&line, debug);
-	ksappend_str(&line, "] ");
+	ksappend(&line, "[", dec(tick() / 100), ".", dec(tick() % 100), "\t][",
+		 s.str, "][", debug, "] ");
 
 	va_start(args, end);
 	while (p != end && n <= 32) {

@@ -7,10 +7,12 @@
 #include <assert.h>
 #include <log2.h>
 #include <vector.h>
+#include <stdarg.h>
 
 #define MODULE "string"
 #define MODULE_DEBUG 0
 
+const char ksappend_end[1];
 static const char *__str_hex = "0123456789abcdef";
 #define STRING_MIN_SIZE 32
 
@@ -549,12 +551,20 @@ int ksappend_str(string *s, const char *str)
 	return ksappend_strn(s, str, strlen(str));
 }
 
-int ksappend(string *s, string *a)
+int ksappend_args(string *s, const char *end, ...)
 {
-	if (!a || !a->str)
-		return 0;
+	char *p = NULL;
+	va_list args;
 
-	return ksappend_strn(s, a->str, a->length);
+	va_start(args, end);
+	while (p != end) {
+		p = va_arg(args, char *);
+		if (p != end)
+			ksappend_str(s, p);
+	}
+	va_end(args);
+
+	return 0;
 }
 
 int ksappend_int(string *s, int val)

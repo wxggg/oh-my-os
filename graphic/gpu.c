@@ -78,14 +78,8 @@ void gpu_fill_rect(u32 x1, u32 y1, u32 x2, u32 y2, color c)
 
 static int gpu_dump_read(struct file *file, string *s)
 {
-	ksappend_str(s, "screen:");
-	ksappend_int(s, vram_width());
-	ksappend_str(s, "x");
-	ksappend_int(s, vram_height());
-	ksappend_str(s, ", ");
-	ksappend_str(s, "vram:");
-	ksappend_str(s, hex(g_gpu.vram));
-
+	ksappend(s, "screen:", dec(vram_width()), "x", dec(vram_height()),
+		 ", vram:", hex(g_gpu.vram));
 	return 0;
 }
 

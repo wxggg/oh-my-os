@@ -40,11 +40,16 @@ string *ksalloc(void);
 void ksfree(string *s);
 void ksinit(string *s, char *buf, size_t size);
 
+extern const char ksappend_end[];
+#define ksappend(s, ...) ksappend_args(s, ksappend_end, ##__VA_ARGS__, ksappend_end)
+
+int ksappend_args(string *s, const char *end, ...);
+
+int ksappend_str(string *s, const char *str);
 int ksappend_char(string *s, char c);
 char kspop_char(string *s);
 int ksappend_strn(string *s, const char *str, size_t length);
 int ksappend_str(string *s, const char *str);
-int ksappend(string *s, string *a);
 int ksappend_int(string *s, int val);
 int ksappend_hex(string *s, int val);
 

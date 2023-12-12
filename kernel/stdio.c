@@ -3,7 +3,7 @@
 #include <string.h>
 #include <queue.h>
 
-#define STDIO_MAX_ARGS 32
+#define STDIO_MAX_ARGS 128
 
 static string g_out_string[STDIO_MAX_ARGS];
 static char g_out_buf[STDIO_MAX_ARGS][128];

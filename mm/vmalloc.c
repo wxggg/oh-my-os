@@ -306,11 +306,8 @@ static int dump_free_vma_lists(struct file *file, string *s)
 		node = list->next;
 		while (node != list) {
 			vma = container_of(node, struct vm_area, free_node);
-			ksappend_str(s, " <");
-			ksappend_hex(s, vma->start);
-			ksappend_str(s, ", ");
-			ksappend_hex(s, vma->end);
-			ksappend_str(s, ">");
+			ksappend(s, " <", hex(vma->start), ", ", hex(vma->end),
+				 ">");
 			node = node->next;
 			assert(node);
 		}
@@ -329,13 +326,9 @@ static int dump_vma_list(struct file *file, string *s)
 	node = vma_list.next;
 	while (node != &vma_list) {
 		vma = container_of(node, struct vm_area, node);
-		ksappend_str(s, vma->free ? "free" : "nonfree");
-		ksappend_str(s, " <");
-		ksappend_hex(s, vma->start);
-		ksappend_str(s, ", ");
-		ksappend_hex(s, vma->end);
-		ksappend_str(s, ">");
-		ksappend_str(s, "\n");
+
+		ksappend(s, vma->free ? "free" : "nonfree", " <",
+			 hex(vma->start), ", ", hex(vma->end), ">\n");
 		node = node->next;
 	}
 

@@ -20,7 +20,7 @@ void readline(string *s);
 
 void stdio_init(void);
 
-extern const char line_end[1];
+extern const char line_end[];
 int print_args(const char *end, ...);
 int print_debug(const char *module, const char *debug, const char *end, ...);
 
@@ -54,12 +54,7 @@ static inline char *__hex(unsigned long val)
 static inline char *__pair(unsigned long a, unsigned long b)
 {
 	string *s = get_out_string();
-	ksappend_char(s, '<');
-	ksappend_hex(s, a);
-	ksappend_char(s, ',');
-	ksappend_char(s, ' ');
-	ksappend_hex(s, b);
-	ksappend_char(s, '>');
+	ksappend(s, "<", __hex(a), ", ", __hex(b), ">");
 	return s->str;
 }
 

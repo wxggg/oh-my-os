@@ -202,20 +202,14 @@ static int dump_kmalloc_early(struct file *file, string *s)
 {
 	u32 i, count;
 
-	ksappend_str(s, "init buffer: <");
-	ksappend_hex(s, (uintptr_t)block_buffer);
-	ksappend_str(s, ", ");
-	ksappend_hex(s, (uintptr_t)block_buffer + MAX_SIZE);
-	ksappend_str(s, "> \n");
+	ksappend(s, "init buffer: <", hex(block_buffer), ", ",
+		 hex(block_buffer + MAX_SIZE), "> \n");
 
 	for (i = 0; i <= MAX_ORDER; i++) {
 		count = list_size(&free_lists[i]);
 		if (count > 0) {
-			ksappend_str(s, "size-");
-			ksappend_int(s, MIN_SIZE << i);
-			ksappend_str(s, ": ");
-			ksappend_int(s, count);
-			ksappend_str(s, "\n");
+			ksappend(s, "size-", dec(MIN_SIZE << i), ": ",
+				 dec(count), "\n");
 		}
 	}
 
@@ -229,10 +223,8 @@ static int dump_kmalloc(struct file *file, string *s)
 	struct list_node *node;
 	struct page *page;
 
-	ksappend_kv(s, "max_size:", KMEM_CACHE_MAX_SIZE);
-	ksappend_str(s, "\n");
-	ksappend_kv(s, "max_order:", KMEM_CACHE_MAX_ORDER);
-	ksappend_str(s, "\n");
+	ksappend(s, "max_size:", dec(KMEM_CACHE_MAX_SIZE), "\n");
+	ksappend(s, "max_order:", dec(KMEM_CACHE_MAX_ORDER), "\n");
 
 	for (i = 0; i <= KMEM_CACHE_MAX_ORDER; i++) {
 		kcache = &kmalloc_cache[i];
