@@ -8,6 +8,8 @@
 #include <register.h>
 #include <schedule.h>
 #include <usr.h>
+#include <memory.h>
+#include <smp.h>
 
 #define MODULE "irq"
 #define MODULE_DEBUG 0
@@ -49,11 +51,11 @@ void idt_init(void)
 {
 	extern uintptr_t __vectors[];
 
-	for (int i = 0; i < 37; i++)
+	for (int i = 0; i < 65; i++)
 		set_gate(&idt_array[i], 0, GD_KTEXT, __vectors[i], DPL_KERNEL);
 
-	for (int i = 37; i < 256; i++)
-		set_gate(&idt_array[i], 0, GD_KTEXT, __vectors[36], DPL_KERNEL);
+	for (int i = 65; i < 256; i++)
+		set_gate(&idt_array[i], 0, GD_KTEXT, __vectors[65], DPL_KERNEL);
 
 	lidt(&idt_pd);
 	pr_info("idt init success");
@@ -92,6 +94,7 @@ void irq_handler(struct trapframe *tf)
 
 	if (irq_handlers[tf->irq]) {
 		irq_handlers[tf->irq]();
+		lapic_eoi();
 		return;
 	}
 
@@ -100,6 +103,7 @@ void irq_handler(struct trapframe *tf)
 		pr_err("General protection fault");
 		break;
 	case IRQ_PGFLT:
+		kernel_page_table_dump(rcr2(), PAGE_SIZE);
 		pr_err("Unable to handle kernel NULL pointer dereference at virtual address ",
 		       hex(rcr2()));
 		break;
@@ -110,10 +114,14 @@ void irq_handler(struct trapframe *tf)
 
 	dump_trapframe(tf);
 
+	if (!start)
+		halt();
+
 	if (current == shell)
 		start_new_shell();
 
 	thread_exit(tf->err);
+	lapic_eoi();
 }
 
 int request_irq(u16 irq, irq_handler_t fn)
@@ -128,7 +136,9 @@ int request_irq(u16 irq, irq_handler_t fn)
 
 void irq_init(void)
 {
-	pic_init();
+	pic_init(false);
+	lapic_init();
+	ioapic_init();
 	idt_init();
 	timer_init();
 	keyboard_init();

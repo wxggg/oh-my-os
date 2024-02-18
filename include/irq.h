@@ -4,6 +4,22 @@
 #include <x86.h>
 #include <types.h>
 
+/* hardware irq */
+#define PIC_TIMER 0
+#define PIC_KEYBD 1
+#define PIC_SLAVE 2
+#define PIC_COM1 4
+
+#define IRQ_GP 13
+#define IRQ_PGFLT 14
+#define IRQ_ERROR 19
+#define IRQ_SPURIOUS 31
+#define IRQ_OFFSET 32
+#define IRQ_TIMER (IRQ_OFFSET + PIC_TIMER)
+#define IRQ_KEYBD (IRQ_OFFSET + PIC_KEYBD)
+#define IRQ_COM1 (IRQ_OFFSET + PIC_COM1)
+#define IRQ_NUM 256
+
 struct trapframe {
 	/* pushal registers */
 	struct {
@@ -42,7 +58,7 @@ int request_irq(u16 irq, irq_handler_t fn);
 void idt_init(void);
 
 void irq_init(void);
-void pic_init(void);
+void pic_init(bool enable);
 void pic_enable(unsigned int irq);
 
 void timer_init(void);
@@ -57,3 +73,15 @@ static inline void intr_disable(void)
 {
 	cli();
 }
+
+struct rtc_date;
+
+void ioapic_init(void);
+void ioapic_enable(int irq, int cpu);
+
+extern volatile int *lapic;
+void lapic_init(void);
+int lapic_id(void);
+void lapic_eoi(void);
+void lapic_startap(u8 apic_id, u32 addr);
+void cmos_time(struct rtc_date *r);

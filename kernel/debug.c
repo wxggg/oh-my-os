@@ -169,6 +169,9 @@ int print_debug(const char *module, const char *debug, const char *end, ...)
 	}
 	va_end(args);
 
+	if (!start)
+		puts(line.str);
+
 	ksappend_str(&dmesg_s, line.str);
 
 	return ret;

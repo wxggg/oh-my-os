@@ -11,7 +11,16 @@
  * physical memory layout
  *
  * +------------------------+ 0xffffffff (4GB)
- * |      io mem            | 128MB
+ * |                        |
+ * |                        |
+ * +------------------------+
+ * |      ioapic            |
+ * +------------------------+ 0xfec00000
+ * |                        |
+ * +------------------------+
+ * |      video memory      |
+ * +------------------------+ 0xfd000000
+ * |                        |
  * +------------------------+ 0xf8000000 (3GB + 896MB)
  * |      reserved          |
  * +------------------------+ ram end
@@ -59,6 +68,7 @@
 #define PHYS_HIGHMEM_START 0x38000000
 #define PHYS_HIGHMEM_END 0xf8000000
 #define PHYS_IOMEM_START 0xf8000000
+#define IOMEM_SIZE 0x08000000
 
 #define LINEAR_MAP_SIZE (PHYS_LINEAR_END)
 

@@ -536,6 +536,9 @@ int ksappend_strn(string *s, const char *str, size_t length)
 	if (!str)
 		return 0;
 
+	if (strlen(str) < length)
+		length = strlen(str);
+
 	ret = string_try_expand(s, s->length + length);
 	if (ret)
 		return ret;

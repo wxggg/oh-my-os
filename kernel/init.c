@@ -14,6 +14,9 @@
 #include <vector.h>
 #include <usr.h>
 #include <kernel.h>
+#include <smp.h>
+
+bool start = false;
 
 #define MODULE "init"
 #define MODULE_DEBUG 0
@@ -33,7 +36,7 @@ int kernel_init_late(void)
 	page_init_late();
 	kmalloc_init_late();
 	vmalloc_init_late();
-
+	smp_init_late();
 	return 0;
 }
 
@@ -52,6 +55,8 @@ int kern_init(void)
 
 	stdio_init();
 
+	smp_init();
+
 	irq_init();
 
 	schedule_init();
@@ -63,6 +68,8 @@ int kern_init(void)
 	kernel_init_late();
 
 	usr_init();
+
+	start = true;
 
 	while (1) {
 		schedule();

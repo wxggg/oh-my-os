@@ -21,7 +21,7 @@
 #define MODULE "timer"
 #define MODULE_DEBUG 0
 
-#define IO_TIMER     0x40
+#define IO_TIMER 0x40
 #define IO_TIMER_CMD 0x43
 
 /**
@@ -33,7 +33,7 @@
 
 /* mode 2: rate generate */
 #define TIMER_MODE_RATEGEN (1 << 2)
-#define TIMER_FREQ         1193182
+#define TIMER_FREQ 1193182
 
 /* r/w counter 16 bits */
 #define TIMER_BIT_16 0x30
@@ -62,12 +62,12 @@ static void timer_irq_handler()
  */
 void timer_init(void)
 {
-    outb(IO_TIMER_CMD, TIMER_CHANNEL0 | TIMER_MODE_RATEGEN | TIMER_BIT_16);
+	outb(IO_TIMER_CMD, TIMER_CHANNEL0 | TIMER_MODE_RATEGEN | TIMER_BIT_16);
 
-    outb(IO_TIMER, TIMER_DIV(TICK_NUM) % TIMER_OFFSET);
-    outb(IO_TIMER, TIMER_DIV(TICK_NUM) / TIMER_OFFSET);
+	outb(IO_TIMER, TIMER_DIV(TICK_NUM) % TIMER_OFFSET);
+	outb(IO_TIMER, TIMER_DIV(TICK_NUM) / TIMER_OFFSET);
 
-    pic_enable(PIC_TIMER);
-    request_irq(IRQ_TIMER, timer_irq_handler);
-    pr_info("init timer success");
+	/* pic_enable(PIC_TIMER); */
+	request_irq(IRQ_TIMER, timer_irq_handler);
+	pr_info("init timer success");
 }

@@ -188,6 +188,8 @@ void keyboard_init(void)
 	request_irq(IRQ_KEYBD, keyboard_irq_handler);
 
 	/* enable keyboard interrupt */
-	pic_enable(PIC_KEYBD);
+	/* pic_enable(PIC_KEYBD); */
+
+	ioapic_enable(IRQ_KEYBD, 0);
 }
 

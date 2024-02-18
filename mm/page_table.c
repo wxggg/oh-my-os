@@ -46,15 +46,14 @@ void page_map(unsigned long *pgdir, unsigned long va, unsigned long pa,
 	      size_t size, uint32_t flag)
 {
 	unsigned long *pte;
-	unsigned long end;
+	unsigned long offset;
 
 	va = round_down_page(va);
 	pa = round_down_page(pa);
-	end = round_up_page(va + size);
 
 	pr_debug("map: <", hex(va), "->", hex(pa), "> size:", hex(size));
 
-	while (va < end) {
+	for (offset = 0; offset < size; offset += PAGE_SIZE) {
 		pte = get_pte(pgdir, va);
 		*pte = pa | flag | PTE_P;
 		tlb_invalidate(pgdir, va);
@@ -67,14 +66,13 @@ void page_map(unsigned long *pgdir, unsigned long va, unsigned long pa,
 void page_unmap(unsigned long *pgdir, unsigned long va, size_t size)
 {
 	unsigned long *pte;
-	unsigned long end;
+	unsigned long offset;
 
 	va = round_down_page(va);
-	end = round_up_page(va + size);
 
-	pr_debug("unmap: ", range(va, end));
+	pr_debug("unmap: va:", hex(va), " size:", hex(size));
 
-	while (va < end) {
+	for (offset = 0; offset < size; offset += PAGE_SIZE) {
 		pte = get_pte(pgdir, va);
 		*pte = 0;
 		tlb_invalidate(pgdir, va);
@@ -88,6 +86,8 @@ void page_table_dump(unsigned long *pgdir, unsigned long va, size_t size)
 	unsigned long pde, pte, va_base, pte_va;
 	unsigned long *pt;
 	int i, j;
+
+	pr_info("dump page table for va:", hex(va), " size:", hex(size));
 
 	for (i = 0; i < 1 << 10; i++) {
 		pde = pgdir[i];

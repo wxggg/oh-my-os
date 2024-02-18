@@ -295,6 +295,151 @@ vector36:
 	pushl $0
 	pushl $36
 	jmp __alltraps
+.global vector37
+vector37:
+	pushl $0
+	pushl $37
+	jmp __alltraps
+.global vector38
+vector38:
+	pushl $0
+	pushl $38
+	jmp __alltraps
+.global vector39
+vector39:
+	pushl $0
+	pushl $39
+	jmp __alltraps
+.global vector40
+vector40:
+	pushl $0
+	pushl $40
+	jmp __alltraps
+.global vector41
+vector41:
+	pushl $0
+	pushl $41
+	jmp __alltraps
+.global vector42
+vector42:
+	pushl $0
+	pushl $42
+	jmp __alltraps
+.global vector43
+vector43:
+	pushl $0
+	pushl $43
+	jmp __alltraps
+.global vector44
+vector44:
+	pushl $0
+	pushl $44
+	jmp __alltraps
+.global vector45
+vector45:
+	pushl $0
+	pushl $45
+	jmp __alltraps
+.global vector46
+vector46:
+	pushl $0
+	pushl $46
+	jmp __alltraps
+.global vector47
+vector47:
+	pushl $0
+	pushl $47
+	jmp __alltraps
+.global vector48
+vector48:
+	pushl $0
+	pushl $48
+	jmp __alltraps
+.global vector49
+vector49:
+	pushl $0
+	pushl $49
+	jmp __alltraps
+.global vector50
+vector50:
+	pushl $0
+	pushl $50
+	jmp __alltraps
+.global vector51
+vector51:
+	pushl $0
+	pushl $51
+	jmp __alltraps
+.global vector52
+vector52:
+	pushl $0
+	pushl $52
+	jmp __alltraps
+.global vector53
+vector53:
+	pushl $0
+	pushl $53
+	jmp __alltraps
+.global vector54
+vector54:
+	pushl $0
+	pushl $54
+	jmp __alltraps
+.global vector55
+vector55:
+	pushl $0
+	pushl $55
+	jmp __alltraps
+.global vector56
+vector56:
+	pushl $0
+	pushl $56
+	jmp __alltraps
+.global vector57
+vector57:
+	pushl $0
+	pushl $57
+	jmp __alltraps
+.global vector58
+vector58:
+	pushl $0
+	pushl $58
+	jmp __alltraps
+.global vector59
+vector59:
+	pushl $0
+	pushl $59
+	jmp __alltraps
+.global vector60
+vector60:
+	pushl $0
+	pushl $60
+	jmp __alltraps
+.global vector61
+vector61:
+	pushl $0
+	pushl $61
+	jmp __alltraps
+.global vector62
+vector62:
+	pushl $0
+	pushl $62
+	jmp __alltraps
+.global vector63
+vector63:
+	pushl $0
+	pushl $63
+	jmp __alltraps
+.global vector64
+vector64:
+	pushl $0
+	pushl $64
+	jmp __alltraps
+.global vector65
+vector65:
+	pushl $0
+	pushl $65
+	jmp __alltraps
 
 .data
 .globl __vectors
@@ -336,3 +481,32 @@ __vectors:
 	.long vector34
 	.long vector35
 	.long vector36
+	.long vector37
+	.long vector38
+	.long vector39
+	.long vector40
+	.long vector41
+	.long vector42
+	.long vector43
+	.long vector44
+	.long vector45
+	.long vector46
+	.long vector47
+	.long vector48
+	.long vector49
+	.long vector50
+	.long vector51
+	.long vector52
+	.long vector53
+	.long vector54
+	.long vector55
+	.long vector56
+	.long vector57
+	.long vector58
+	.long vector59
+	.long vector60
+	.long vector61
+	.long vector62
+	.long vector63
+	.long vector64
+	.long vector65
