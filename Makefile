@@ -77,6 +77,7 @@ $(call add_files_cc,$(call listf_cc,$(LIBDIR)),libs,)
 KINCLUDE	+= 	kernel/
 
 KSRCDIR		+= 	kernel \
+			entryother \
 			mm \
 			graphic \
 			schedule \
@@ -103,19 +104,30 @@ $(kernel): $(KOBJS)
 $(call create_target,kernel)
 
 # create bootblock
-bootfiles = $(call listf_cc,boot/boot)
+bootfiles = boot/boot/bootsect.S
 $(foreach f,$(bootfiles),$(call cc_compile,$(f),$(CC),$(CFLAGS) -Os -nostdinc))
 
 bootblock = $(call totarget,bootblock)
 
-$(bootblock): $(call toobj,boot/boot/bootsect.S) $(call toobj,$(bootfiles)) | $(call totarget,resize_binary)
+$(bootblock): $(call toobj,$(bootfiles)) | $(call totarget,resize_binary)
 	@echo + ld $@
 	$(V)$(LD) $(LDFLAGS) -N -e start -Ttext 0x7C00 $^ -o $(call toobj,bootblock)
 	@$(OBJDUMP) -S $(call objfile,bootblock) > $(call asmfile,bootblock)
 	@$(OBJCOPY) -S -O binary $(call objfile,bootblock) $(call outfile,bootblock)
 	@$(call totarget,resize_binary) -i $(call outfile, bootblock) -o $(bootblock) -b
 
-$(call create_target,bootblock)
+entryother_files = $(call listf_cc,boot/entryother)
+$(foreach f,$(entryother_files),$(call cc_compile,$(f),$(CC),$(CFLAGS) -Os -nostdinc))
+
+entryother = $(call totarget,entryother)
+
+$(entryother): $(call toobj,$(entryother_files)) | $(call totarget,resize_binary)
+	@echo + ld $@
+	$(V)$(LD) $(LDFLAGS) -N -e start -Ttext 0x5000 $^ -o $(call toobj,entryother)
+	@$(OBJDUMP) -S $(call objfile,entryother) > $(call asmfile,entryother)
+	@$(OBJCOPY) -S -O binary $(call objfile,entryother) $(call outfile,entryother)
+	@$(call totarget,resize_binary) -i $(call outfile, entryother) -o $(entryother) -b
+$(call create_target,entryother)
 
 setupfiles = $(call listf_cc,boot/setup)
 $(foreach f,$(setupfiles),$(call cc_compile,$(f),$(CC),$(CFLAGS) -Os -nostdinc))
@@ -139,10 +151,11 @@ $(call create_target_host,resize_binary,resize_binary)
 IMG	:= $(call totarget,oh-my-os.img)
 
 $(IMG): $(bootblock) $(setupblock) $(kernel)
-	$(V)dd if=/dev/zero of=$@ bs=512 count=10000
+	# $(V)dd if=/dev/zero of=$@ bs=512 count=10000
 	$(V)dd if=$(bootblock) of=$@ conv=notrunc
 	$(V)dd if=$(setupblock) of=$@ bs=512 seek=1 conv=notrunc
-	$(V)dd if=$(kernel) of=$@ bs=512 seek=3 conv=notrunc
+	$(V)dd if=$(entryother) of=$@ bs=512 seek=3 conv=notrunc
+	$(V)dd if=$(kernel) of=$@ bs=512 seek=4 conv=notrunc
 $(call create_target,oh-my-os.img)
 
 $(call finish_all)

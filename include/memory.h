@@ -139,6 +139,7 @@ void page_map(unsigned long *pgdir, unsigned long va, unsigned long pa, size_t s
 void page_unmap(unsigned long *pgdir, unsigned long va, size_t size);
 void page_table_dump(unsigned long *pgdir, unsigned long va, size_t size);
 void enable_paging(unsigned long cr3);
+void start_paging(uint32_t *pgdir);
 void *page_address(struct page *page);
 
 #define virt_to_phys(x) ((uintptr_t)(x) - KERNEL_VIRT_BASE)

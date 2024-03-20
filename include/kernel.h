@@ -23,4 +23,4 @@ unsigned long tick();
 
 void reboot(void);
 
-extern bool start;
+extern bool os_start;

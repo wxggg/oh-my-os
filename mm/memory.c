@@ -169,6 +169,30 @@ static void gdt_init(void)
 	asm volatile("ljmp %0, $1f\n 1:\n" ::"i"(KERNEL_CS));
 }
 
+void start_paging(uint32_t *pgdir)
+{
+	/* since the gdt has not been set to identity map,
+	 * so the linear got after gdt is:
+	 * linear address = virtual address - KERNEL_VIRT_BASE
+	 * so the fetched instruction will minus KERNEL_VIRT_BASE
+	 * however the map of linear address [0, ~] to physical address [0, ~]
+	 * has not been set up yet, so we need to set up the map temporarily to
+	 * avoid page fault when execute instruction after enable paging.
+	 */
+	pgdir[0] = pgdir[pde_index(KERNEL_VIRT_BASE)];
+
+	/* enable paging */
+	enable_paging(virt_to_phys(pgdir));
+
+	/* reconfigure the gdt to identity map virtual address to linear address. */
+	gdt_init();
+
+	/* the map of linear address [0, ~] is unnessary now, since the gdt
+	 * has changed the map of virtual address to linear address to identity map.
+	 */
+	pgdir[0] = 0;
+}
+
 void kernel_map(unsigned long va, unsigned long pa, size_t size, uint32_t flag)
 {
 	return page_map(current->proc->mm->pgdir, va, pa, size, flag);
@@ -212,13 +236,7 @@ void memory_init(void)
 	/* map linear area */
 	kernel_map(KERNEL_VIRT_BASE, 0x0, linear_end_pfn << PAGE_SHIFT, PTE_W);
 
-	mm->pgdir[0] = mm->pgdir[pde_index(KERNEL_VIRT_BASE)];
-
-	enable_paging(cr3);
-
-	gdt_init();
-
-	mm->pgdir[0] = 0;
+	start_paging(mm->pgdir);
 
 	vmalloc_init();
 

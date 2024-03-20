@@ -75,7 +75,7 @@ static void readseg(uintptr_t va, uint32_t count, uint32_t offset)
 	va -= offset % SECTSIZE;
 
 	// translate from bytes to sectors; kernel starts at sector 1
-	uint32_t secno = (offset / SECTSIZE) + 1;
+	uint32_t secno = offset / SECTSIZE;
 
 	// If this is too slow, we could read lots of sectors at a time.
 	// We'd write more to memory than asked, but it doesn't matter --
@@ -85,11 +85,22 @@ static void readseg(uintptr_t va, uint32_t count, uint32_t offset)
 	}
 }
 
+/*
+ * image format
+ *
+ * bootblock - 1 sect -> 0x7c00
+ * setupblock - 2 sect -> 0x7e00
+ * entryother - 1 sect -> 0x5000
+ * kernel:
+ *	ELFHDR - 8 sect -> 0x10000
+ *	...
+ */
+
 /* bootmain - the entry of bootloader */
 void bootmain(void)
 {
 	// read the 1st page off disk
-	readseg((uintptr_t)ELFHDR, SECTSIZE * 8, SECTSIZE * 2);
+	readseg((uintptr_t)ELFHDR, SECTSIZE * 8, SECTSIZE * 4);
 
 	// is this a valid ELF?
 	if (ELFHDR->e_magic != ELF_MAGIC) {
@@ -102,10 +113,10 @@ void bootmain(void)
 	ph = (struct proghdr *)((uintptr_t)ELFHDR + ELFHDR->e_phoff);
 	eph = ph + ELFHDR->e_phnum;
 	for (; ph < eph; ph++) {
-		readseg(ph->p_va & 0xFFFFFF, ph->p_memsz, SECTSIZE * 2 + ph->p_offset);
+		readseg(ph->p_va & 0xFFFFFF, ph->p_memsz, SECTSIZE * 4 + ph->p_offset);
 	}
 
-	readseg((uintptr_t)RES_ADDR, SECTSIZE * (8 + 116), SECTSIZE * 8000);
+	readseg((uintptr_t)0x5000, SECTSIZE, SECTSIZE * 3);
 
 	// call the entry point from the ELF header
 	// note: does not return

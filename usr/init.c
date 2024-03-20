@@ -63,6 +63,10 @@ int usr_init(void)
 	if (ret)
 		return ret;
 
+	ret = mem_init();
+	if (ret)
+		return ret;
+
 	start_new_shell();
 	return 0;
 }

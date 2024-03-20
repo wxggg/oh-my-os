@@ -114,7 +114,7 @@ void irq_handler(struct trapframe *tf)
 
 	dump_trapframe(tf);
 
-	if (!start)
+	if (!os_start)
 		halt();
 
 	if (current == shell)

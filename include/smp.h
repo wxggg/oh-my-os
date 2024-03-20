@@ -169,3 +169,17 @@ struct mp_lintr {
 
 int smp_init(void);
 int smp_init_late(void);
+
+struct cpu {
+	int id;
+	bool init;
+	bool started;
+	struct mp_processor *processor;
+};
+
+extern struct cpu cpus[8];
+extern u32 nr_cpu;
+
+u32 cpu_id();
+struct cpu *this_cpu();
+int cpu_up(u32 cpu);

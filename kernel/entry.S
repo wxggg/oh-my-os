@@ -13,10 +13,26 @@ kern_entry:
 
 relocated:
 	# set up ebp, esp
-	movl $0x0, %ebp
-	movl $bootstacktop, %esp
+	movl (__entry_cnt), %ecx
+	movl $KERNEL_STACK_SIZE, %eax
+	mull %ecx
+	addl $bootstack, %eax
 
-	call kern_init
+	movl $0x0, %ebp
+	addl $KERNEL_STACK_SIZE, %eax
+	movl %eax, %esp
+
+	incl (__entry_cnt)
+
+	cmp $1, (__entry_cnt)
+	jne secondary
+
+	call start_kernel
+	jmp spin
+
+secondary:
+	call start_secondary
+	jmp spin
 
 spin:
 	jmp spin
@@ -26,10 +42,21 @@ spin:
 .globl bootstack
 bootstack:
 	.space KERNEL_STACK_SIZE
+	.space KERNEL_STACK_SIZE
+	.space KERNEL_STACK_SIZE
+	.space KERNEL_STACK_SIZE
+	.space KERNEL_STACK_SIZE
+	.space KERNEL_STACK_SIZE
+	.space KERNEL_STACK_SIZE
+	.space KERNEL_STACK_SIZE
 .global bootstacktop
 bootstacktop:
 
 .align 4
+
+__entry_cnt:
+	.word 0
+
 __gdt:
 	SEG_NULLASM
 	SEG_ASM(STA_X | STA_R, - KERNEL_VIRT_BASE, 0xFFFFFFFF)

@@ -630,3 +630,32 @@ int ksfit(string *s, char c, int n)
 	s->length = n;
 	return 0;
 }
+
+static inline bool is_num(char c)
+{
+	return c >= '0' && c <= '9';
+}
+
+static inline bool is_digit(char c)
+{
+	return is_num(c) || (c >= 'a' && c <= 'f');
+}
+
+int hex_to_value(string *s, int *value)
+{
+	int i, v = 0;
+
+	if (s->str[0] != '0' || s->str[1] != 'x')
+		return -1;
+
+	for (i = 2; i < 10 && i < s->length; i++) {
+		if (!is_digit(s->str[i]))
+			return -1;
+
+		v = v * 16 + (is_num(s->str[i]) ? (s->str[i] - '0') :
+						 (10 + s->str[i] - 'a'));
+	}
+
+	*value = v;
+	return 0;
+}

@@ -95,8 +95,11 @@ void page_table_dump(unsigned long *pgdir, unsigned long va, size_t size)
 			continue;
 
 		va_base = i * 1024 * PAGE_SIZE;
-		if (va_base < va || va_base >= (va + size))
+		if (va_base < va)
 			continue;
+
+		if (va_base >= (va + size))
+			return;
 
 		pt = (void *)phys_to_virt(page_base(pde));
 		printk("|-[", dec(i), "] va_base:", hex(va_base),
@@ -110,6 +113,9 @@ void page_table_dump(unsigned long *pgdir, unsigned long va, size_t size)
 			pte_va = va_base + j * PAGE_SIZE;
 			printk("\t|-[", dec(j), "] va:", hex(pte_va),
 			       " -> pte:", hex(pte), "\n");
+
+			if (pte_va > (va + size))
+				return;
 		}
 	}
 }

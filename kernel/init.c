@@ -16,12 +16,12 @@
 #include <kernel.h>
 #include <smp.h>
 
-bool start = false;
+bool os_start = false;
 
 #define MODULE "init"
 #define MODULE_DEBUG 0
 
-int kern_init(void) __attribute__((noreturn));
+void start_kernel(void) __attribute__((noreturn));
 
 void reboot(void)
 {
@@ -40,7 +40,7 @@ int kernel_init_late(void)
 	return 0;
 }
 
-int kern_init(void)
+void start_kernel(void)
 {
 	extern char edata[], end[];
 	memset(edata, 0, end - edata);
@@ -63,13 +63,16 @@ int kern_init(void)
 
 	fs_init();
 
-	pr_info("kernel init success!");
-
 	kernel_init_late();
 
 	usr_init();
 
-	start = true;
+	this_cpu()->started = true;
+	cpu_up(1);
+
+	pr_info("kernel init success!");
+
+	os_start = true;
 
 	while (1) {
 		schedule();

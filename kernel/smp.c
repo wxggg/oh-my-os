@@ -5,20 +5,25 @@
 #include <smp.h>
 #include <fs.h>
 #include <irq.h>
+#include <schedule.h>
 
 #define MODULE "smp"
 #define MODULE_DEBUG 0
 
-struct cpu {
-	int id;
-	struct mp_processor *processor;
-};
-
-struct cpu cpus[8];
-
-u32 nr_cpu;
+#define MAX_CPU 8
+struct cpu cpus[MAX_CPU];
 
 extern volatile u8 ioapic_id;
+
+u32 cpu_id()
+{
+	return lapic_id();
+}
+
+struct cpu *this_cpu()
+{
+	return &cpus[cpu_id()];
+}
 
 static int list_cpu(struct file *file, vector *v)
 {
@@ -26,8 +31,11 @@ static int list_cpu(struct file *file, vector *v)
 	struct mp_processor *processor;
 	int i;
 
-	for (i = 0; i < nr_cpu; i++) {
+	for (i = 0; i < MAX_CPU; i++) {
 		cpu = &cpus[i];
+
+		if (!cpus[i].started)
+			continue;
 
 		processor = cpu->processor;
 
@@ -71,12 +79,16 @@ int scan_mp_entry(u8 *start, u8 *end)
 	struct mp_iointr *iointr;
 	struct mp_lintr *lintr;
 
-	nr_cpu = 0;
-
 	for (p = start; p < end;) {
 		switch (*p) {
 		case MP_ENTRY_TYPE_PROCESSOR:
 			processor = (struct mp_processor *)p;
+
+			if (processor->lapic_id >= MAX_CPU) {
+				WARN_ON((processor->lapic_id > MAX_CPU));
+				continue;
+			}
+
 			pr_info("find processor lapic_id:",
 				dec(processor->lapic_id),
 				" en:", dec(processor->cpu_en),
@@ -84,9 +96,10 @@ int scan_mp_entry(u8 *start, u8 *end)
 				" stepping:", dec(processor->cpu_stepping),
 				" model:", dec(processor->cpu_model),
 				" family:", dec(processor->cpu_family));
-			cpus[nr_cpu].id = nr_cpu;
-			cpus[nr_cpu].processor = processor;
-			nr_cpu++;
+			cpus[processor->lapic_id].id = processor->lapic_id;
+			cpus[processor->lapic_id].started = false;
+			cpus[processor->lapic_id].init = true;
+			cpus[processor->lapic_id].processor = processor;
 			p += sizeof(*processor);
 			break;
 		case MP_ENTRY_TYPE_BUS:
@@ -155,6 +168,7 @@ int smp_init(void)
 		" lapic_addr:", hex(config->lapic_addr));
 
 	lapic = (void *)config->lapic_addr;
+	kernel_map((uint32_t)lapic, (uint32_t)lapic, PAGE_SIZE, PTE_W);
 
 	scan_mp_entry((u8 *)config + sizeof(*config),
 		      (u8 *)config + config->length);
@@ -176,6 +190,56 @@ int smp_init_late(void)
 	struct file *file;
 
 	binfs_create_file("lscpu", &list_cpu_ops, NULL, &file);
+
+	return 0;
+}
+
+void start_secondary(void) __attribute__((noreturn));
+
+void start_secondary(void)
+{
+	u32 next_cpu;
+
+	start_paging(current->proc->mm->pgdir);
+	lapic_init();
+	idt_init();
+	intr_enable();
+
+	pr_info("cpu-", dec(cpu_id()), " started!");
+
+	next_cpu = cpu_id() + 1;
+
+	if (next_cpu < MAX_CPU && cpus[next_cpu].init)
+		cpu_up(next_cpu);
+
+	this_cpu()->started = true;
+
+	while (1) {
+		halt();
+	}
+}
+
+int cpu_up(u32 cpu)
+{
+	struct cpu *c;
+	u8 *code = (void *)phys_to_virt(0x5000);
+
+	if (cpu >= MAX_CPU)
+		return -ENODEV;
+
+	if (!cpus[cpu].init)
+		return -EINVAL;
+
+	c = &cpus[cpu];
+
+	assert(c->id == c->processor->lapic_id);
+
+	lapic_startap(c->processor->lapic_id, virt_to_phys(code));
+
+	pr_info("start cpu-", dec(c->id));
+
+	while (c->started) {
+	}
 
 	return 0;
 }

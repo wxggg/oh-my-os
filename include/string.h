@@ -69,3 +69,4 @@ static inline int ksappend_kvx(string *s, const char *key, int val)
 
 int kssplit(string *s, char c, vector *vec);
 int ksfit(string *s, char c, int n);
+int hex_to_value(string *s, int *value);

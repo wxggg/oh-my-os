@@ -67,8 +67,6 @@ void lapic_init(void)
 		return;
 	}
 
-	kernel_map((uint32_t)lapic, (uint32_t)lapic, PAGE_SIZE, PTE_W);
-
 	// Enable local APIC; set spurious interrupt vector.
 	lapic_write(SVR, ENABLE | (IRQ_OFFSET + IRQ_SPURIOUS));
 
