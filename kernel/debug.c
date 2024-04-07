@@ -8,6 +8,7 @@
 #include <fs.h>
 #include <stdarg.h>
 #include <assert.h>
+#include <smp.h>
 
 #define MODULE "debug"
 #define MODULE_DEBUG 0
@@ -153,6 +154,8 @@ int print_debug(const char *module, const char *debug, const char *end, ...)
 	int n = 0;
 	int ret = 0;
 
+	spin_lock(&pr_lock);
+
 	line.length = 0;
 	s.length = 0;
 
@@ -174,6 +177,7 @@ int print_debug(const char *module, const char *debug, const char *end, ...)
 
 	ksappend_str(&dmesg_s, line.str);
 
+	spin_unlock(&pr_lock);
 	return ret;
 }
 

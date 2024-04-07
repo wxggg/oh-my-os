@@ -4,6 +4,7 @@
 #include <string.h>
 #include <kernel.h>
 #include <queue.h>
+#include <lock.h>
 
 int serial_received();
 void serial_init(void);
@@ -14,6 +15,7 @@ void putchar(int ch);
 int puts(const char *str);
 
 extern queue *stdio_que;
+extern spinlock_t pr_lock;
 
 char readchar(void);
 void readline(string *s);

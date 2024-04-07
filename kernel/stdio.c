@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <queue.h>
+#include <lock.h>
 
 #define STDIO_MAX_ARGS 128
 
@@ -12,6 +13,8 @@ static int index = 0;
 const char line_end[1];
 
 queue *stdio_que;
+
+spinlock_t pr_lock;
 
 string *get_out_string(void)
 {
@@ -54,6 +57,8 @@ int print_args(const char *end, ...)
 	int n = 0;
 	int ret = 0;
 
+	spin_lock(&pr_lock);
+
 	va_start(args, end);
 	while (p != end && n <= STDIO_MAX_ARGS) {
 		p = va_arg(args, char *);
@@ -62,6 +67,7 @@ int print_args(const char *end, ...)
 	}
 	va_end(args);
 
+	spin_unlock(&pr_lock);
 	return ret;
 }
 
@@ -100,4 +106,5 @@ void stdio_init(void)
 	stdio_que = queue_create(char);
 
 	serial_init();
+	spinlock_init(&pr_lock);
 }

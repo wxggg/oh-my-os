@@ -32,6 +32,7 @@ void debug_init(void);
 			pr_err("bug on ", __FILE__, ":", __LINE__, ":", \
 			       ##__VA_ARGS__);                          \
 			dump_stack();                                   \
+			halt();                                         \
 		}                                                       \
 	} while (0)
 

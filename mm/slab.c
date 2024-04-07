@@ -4,6 +4,7 @@
 #include <assert.h>
 #include <vmalloc.h>
 #include <bitops.h>
+#include <atomic.h>
 
 #define MODULE "slab"
 #define MODULE_DEBUG 0
@@ -39,7 +40,7 @@ static inline int slab_page_init(struct kmem_cache *cache, struct page *page)
 	for (i = 0; i < total; i++)
 		page->freelist[i] = i;
 
-	set_bit(page->flags, PAGE_SLAB);
+	set_bit(PAGE_SLAB, &page->flags);
 	return 0;
 }
 
@@ -49,7 +50,7 @@ static inline void slab_page_deinit(struct page *page)
 	page->total = 0;
 	page->active = 0;
 	page->slab_cache = 0;
-	clear_bit(page->flags, PAGE_SLAB);
+	clear_bit(PAGE_SLAB, &page->flags);
 }
 
 static inline void *alloc_block(struct kmem_cache *cache, struct page *page)
@@ -90,7 +91,9 @@ void *kmem_cache_alloc(struct kmem_cache *cache)
 {
 	struct page *page;
 	struct list_node *node;
+	void *ptr;
 
+	spin_lock(&cache->lock);
 	if (list_empty(&cache->slabs_partial)) {
 		page = alloc_page(GFP_NORMAL);
 		if (slab_page_init(cache, page))
@@ -102,7 +105,10 @@ void *kmem_cache_alloc(struct kmem_cache *cache)
 	}
 
 	assert(page);
-	return alloc_block(cache, page);
+	ptr = alloc_block(cache, page);
+	spin_unlock(&cache->lock);
+
+	return ptr;
 }
 
 void kmem_cache_free(struct kmem_cache *cache, void *obj)
@@ -112,9 +118,11 @@ void kmem_cache_free(struct kmem_cache *cache, void *obj)
 	assert(!is_vmalloc_addr((uintptr_t)obj));
 
 	page = virt_to_page((uintptr_t)obj);
-	assert(page && page->slab_cache == cache && !is_bit_set(page->flags, PAGE_HIGHMEM));
+	assert(page && page->slab_cache == cache && !test_bit(PAGE_HIGHMEM, &page->flags));
 
+	spin_lock(&cache->lock);
 	free_block(cache, page, obj);
+	spin_unlock(&cache->lock);
 }
 
 int kmem_cache_create(struct kmem_cache *cache, size_t size)
@@ -125,5 +133,6 @@ int kmem_cache_create(struct kmem_cache *cache, size_t size)
 	list_init(&cache->slabs_full);
 	list_init(&cache->slabs_partial);
 	cache->size = size;
+	spinlock_init(&cache->lock);
 	return 0;
 }

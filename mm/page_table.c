@@ -5,6 +5,7 @@
 #include <vmalloc.h>
 #include <register.h>
 #include <debug.h>
+#include <atomic.h>
 
 #define MODULE "page table"
 #define MODULE_DEBUG 0
@@ -134,7 +135,7 @@ void enable_paging(unsigned long cr3)
 
 void *page_address(struct page *page)
 {
-	if (!is_bit_set(page->flags, PAGE_HIGHMEM))
+	if (!test_bit(PAGE_HIGHMEM, &page->flags))
 		return (void *)phys_to_virt(page_to_phys(page));
 
 	return vmap(&page, 1);

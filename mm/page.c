@@ -8,6 +8,8 @@
 #include <assert.h>
 #include <bitops.h>
 #include <fs.h>
+#include <atomic.h>
+#include <lock.h>
 
 /* use buddy algorithm to allocate free pages,
  * support physical address up to 4GB, totally 1024 * 1024 pages.
@@ -20,15 +22,18 @@
 #define MAX_ORDER 10
 
 struct page pages[TOTAL_PAGES];
+static spinlock_t page_lock;
 
 static struct list_node highmem_free_lists[MAX_ORDER + 1];
 static struct list_node free_lists[MAX_ORDER + 1];
 
-#define dump_page(page) \
-	do { \
+#define dump_page(page)                                                       \
+	do {                                                                  \
 		pr_debug("page:", hex(page), " pfn:", hex(page_to_pfn(page)), \
-			 " order:", dec(page->order), " flags:", hex(page->flags), \
-			 " ", is_bit_set(page->flags, PAGE_HIGHMEM) ? "highmem" : "linear"); \
+			 " order:", dec(page->order),                         \
+			 " flags:", hex(page->flags), " ",                    \
+			 test_bit(PAGE_HIGHMEM, &page->flags) ? "highmem" :   \
+								"linear");    \
 	} while (0);
 
 unsigned long page_to_pfn(struct page *page)
@@ -48,17 +53,17 @@ static inline struct page *page_buddy(struct page *page)
 
 static inline void free_page(struct page *page, unsigned int order)
 {
-	set_bit(page->flags, PAGE_FREE);
+	set_bit(PAGE_FREE, &page->flags);
 	page->order = order;
 
-	if (is_bit_set(page->flags, PAGE_HIGHMEM))
+	if (test_bit(PAGE_HIGHMEM, &page->flags))
 		list_insert(&highmem_free_lists[order], &page->node);
 	else
 		list_insert(&free_lists[order], &page->node);
 }
 
-static inline void init_free_pages(struct page *start_page, unsigned long nr_pages,
-				   unsigned int order)
+static inline void init_free_pages(struct page *start_page,
+				   unsigned long nr_pages, unsigned int order)
 {
 	unsigned long count;
 
@@ -66,7 +71,7 @@ static inline void init_free_pages(struct page *start_page, unsigned long nr_pag
 		free_page(start_page + count, order);
 
 	assert(count == nr_pages, "invalid nr_pages:", dec(nr_pages),
-		       ", order:", dec(order));
+	       ", order:", dec(order));
 }
 
 void add_free_pages(unsigned long start_pfn, unsigned long end_pfn)
@@ -76,7 +81,7 @@ void add_free_pages(unsigned long start_pfn, unsigned long end_pfn)
 	bool highmem;
 
 	assert(start_pfn <= end_pfn, " invalid pfn range ",
-		       range(start_pfn, end_pfn));
+	       range(start_pfn, end_pfn));
 
 	if (start_pfn >= highmem_start_pfn) {
 		highmem = true;
@@ -93,9 +98,9 @@ void add_free_pages(unsigned long start_pfn, unsigned long end_pfn)
 
 	for (pfn = start_pfn; pfn < end_pfn; pfn++) {
 		page = pfn_to_page(pfn);
-		set_bit(page->flags, PAGE_VALID);
+		set_bit(PAGE_VALID, &page->flags);
 		if (highmem)
-			set_bit(page->flags, PAGE_HIGHMEM);
+			set_bit(PAGE_HIGHMEM, &page->flags);
 	}
 
 	/* split <start, end> to three parts */
@@ -107,17 +112,20 @@ void add_free_pages(unsigned long start_pfn, unsigned long end_pfn)
 
 	if (split_start >= split_end) {
 		/* init as single page */
-		init_free_pages(pfn_to_page(start_pfn), (end_pfn - start_pfn), 0);
+		init_free_pages(pfn_to_page(start_pfn), (end_pfn - start_pfn),
+				0);
 	} else {
-
 		/* init as single page */
-		init_free_pages(pfn_to_page(start_pfn), (split_start - start_pfn), 0);
+		init_free_pages(pfn_to_page(start_pfn),
+				(split_start - start_pfn), 0);
 
 		/* init as max order pages */
-		init_free_pages(pfn_to_page(split_start), (split_end - split_start), MAX_ORDER);
+		init_free_pages(pfn_to_page(split_start),
+				(split_end - split_start), MAX_ORDER);
 
 		/* init as single page */
-		init_free_pages(pfn_to_page(split_end), (end_pfn - split_end), 0);
+		init_free_pages(pfn_to_page(split_end), (end_pfn - split_end),
+				0);
 	}
 }
 
@@ -138,30 +146,32 @@ struct page *alloc_pages(gfp_t gfp_mask, unsigned int order)
 	if (order > MAX_ORDER)
 		return NULL;
 
-	for (i = order; i <= MAX_ORDER; i++)
-	{
+	spin_lock(&page_lock);
+	for (i = order; i <= MAX_ORDER; i++) {
 		list = get_free_list(gfp_mask, i);
-		if (!list_empty(list))
-		{
+		if (!list_empty(list)) {
 			node = list_next(list);
 			list_remove(node);
 			page = container_of(node, struct page, node);
 
-			assert(i == page->order, "invalid order ", pair(i, page->order));
+			assert(i == page->order, "invalid order ",
+			       pair(i, page->order));
 
-			while (page->order > order)
-			{
+			while (page->order > order) {
 				page->order--;
 				buddy = page_buddy(page);
-				assert(is_bit_set(buddy->flags, PAGE_VALID),
-				       "buddy-", dec(page_to_pfn(buddy)), " is not available");
+				assert(test_bit(PAGE_VALID, &buddy->flags),
+				       "buddy-", dec(page_to_pfn(buddy)),
+				       " is not available");
 				free_page(buddy, page->order);
 			}
 
-			clear_bit(page->flags, PAGE_FREE);
+			clear_bit(PAGE_FREE, &page->flags);
+			spin_unlock(&page_lock);
 			return page;
 		}
 	}
+	spin_unlock(&page_lock);
 
 	return NULL;
 }
@@ -170,12 +180,12 @@ void free_pages(struct page *page)
 {
 	struct page *buddy;
 
-	while (page->order < MAX_ORDER)
-	{
+	spin_lock(&page_lock);
+	while (page->order < MAX_ORDER) {
 		buddy = page_buddy(page);
 
-		if (!is_bit_set(buddy->flags, PAGE_VALID) ||
-		    !is_bit_set(buddy->flags, PAGE_FREE))
+		if (!test_bit(PAGE_VALID, &buddy->flags) ||
+		    !test_bit(PAGE_FREE, &buddy->flags))
 			break;
 
 		list_remove(&buddy->node);
@@ -186,6 +196,7 @@ void free_pages(struct page *page)
 	}
 
 	free_page(page, page->order);
+	spin_unlock(&page_lock);
 }
 
 void page_init(void)
@@ -196,6 +207,8 @@ void page_init(void)
 		list_init(&highmem_free_lists[order]);
 		list_init(&free_lists[order]);
 	}
+
+	spinlock_init(&page_lock);
 }
 
 static int dump_free_list(struct file *file, string *s)

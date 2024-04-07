@@ -15,6 +15,7 @@
 #include <usr.h>
 #include <kernel.h>
 #include <smp.h>
+#include <lock.h>
 
 bool os_start = false;
 

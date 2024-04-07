@@ -10,6 +10,7 @@
 #include <mm.h>
 #include <fs.h>
 #include <debug.h>
+#include <lock.h>
 
 #define MODULE "vmalloc"
 #define MODULE_DEBUG 0
@@ -19,6 +20,7 @@
 static struct rb_tree *vma_tree;
 struct list_node vma_list;
 struct list_node free_vma_lists[MAX_VMA_ORDER + 1];
+static spinlock_t vma_lock;
 
 static inline unsigned long vma_length(struct vm_area *vma)
 {
@@ -45,7 +47,7 @@ static inline struct vm_area *vma_next(struct vm_area *vma)
 	return container_of(node, struct vm_area, node);
 }
 
-static inline struct vm_area *find_vma(unsigned long va)
+static struct vm_area *find_vma(unsigned long va)
 {
 	struct rb_node *node;
 	struct vm_area *vma;
@@ -53,11 +55,13 @@ static inline struct vm_area *find_vma(unsigned long va)
 	assert(va >= VMALLOC_START && va < VMALLOC_END,
 	       "invalid addr:", hex(va));
 
+	spin_lock(&vma_lock);
 	node = rb_tree_search(vma_tree, va);
 	assert(node);
 
 	vma = rb_node_value(node);
 	assert(vma);
+	spin_lock(&vma_lock);
 
 	return vma;
 }
@@ -68,6 +72,7 @@ static void free_vma(struct vm_area *vma)
 
 	assert(vma && vma->start >= VMALLOC_START && vma->end < VMALLOC_END);
 
+	spin_lock(&vma_lock);
 	rb_tree_remove(vma_tree, vma->start);
 
 	while ((prev = vma_prev(vma)) && prev->free) {
@@ -93,9 +98,10 @@ static void free_vma(struct vm_area *vma)
 	}
 
 	vma->free = true;
+	spin_unlock(&vma_lock);
 }
 
-struct vm_area *alloc_vma(unsigned long len)
+static struct vm_area *alloc_vma(unsigned long len)
 {
 	struct vm_area *vma, *vma_buddy;
 	struct list_node *node;
@@ -104,6 +110,7 @@ struct vm_area *alloc_vma(unsigned long len)
 
 	order = ilog2_roundup(len >> PAGE_SHIFT);
 
+	spin_lock(&vma_lock);
 	for (i = order; i <= MAX_VMA_ORDER; i++) {
 		if (!list_empty(&free_vma_lists[i])) {
 			node = list_next(&free_vma_lists[i]);
@@ -114,7 +121,7 @@ struct vm_area *alloc_vma(unsigned long len)
 			if (vma_length(vma) >= len + PAGE_SIZE) {
 				vma_buddy = kmalloc(sizeof(*vma_buddy));
 				if (!vma_buddy)
-					return NULL;
+					goto not_found;
 
 				vma_buddy->end = vma->end;
 				vma->end = vma->start + len;
@@ -133,10 +140,16 @@ struct vm_area *alloc_vma(unsigned long len)
 			list_remove(&vma->free_node);
 			vma->free = false;
 			rb_tree_insert(vma_tree, vma->start, vma->end - 1, vma);
-			return vma;
+			goto out;
 		}
 	}
 
+out:
+	spin_unlock(&vma_lock);
+	return vma;
+
+not_found:
+	spin_unlock(&vma_lock);
 	return NULL;
 }
 
@@ -286,6 +299,7 @@ int vmalloc_init(void)
 	vma_tree = rb_tree_create();
 	assert(vma_tree);
 
+	spinlock_init(&vma_lock);
 	return 0;
 }
 

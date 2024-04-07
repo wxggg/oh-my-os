@@ -51,7 +51,7 @@ static struct file_operations thread_state_fops = {
 	.read = thread_state_read,
 };
 
-static int create_therad_procfs(struct thread *t)
+static int create_thread_procfs(struct thread *t)
 {
 	int ret;
 	string *s;
@@ -111,7 +111,7 @@ struct thread *thread_run(int (*fn)(void *), void *arg)
 	list_insert(&current_proc->thread_group, &t->node);
 	list_insert(&run_list, &t->sched_node);
 
-	ret = create_therad_procfs(t);
+	ret = create_thread_procfs(t);
 	if (ret)
 		goto err_free_kstack;
 

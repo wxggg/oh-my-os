@@ -6,6 +6,7 @@
 #include <stdio.h>
 #include <fs.h>
 #include <kernel.h>
+#include <atomic.h>
 
 #define MODULE "kmalloc"
 #define MODULE_DEBUG 0
@@ -179,7 +180,7 @@ void kfree(void *ptr)
 	}
 
 	page = virt_to_page((unsigned long)ptr);
-	if (is_bit_set(page->flags, PAGE_SLAB)) {
+	if (test_bit(PAGE_SLAB, &page->flags)) {
 		assert(page->slab_cache);
 		kmem_cache_free(page->slab_cache, ptr);
 		return;
