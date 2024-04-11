@@ -167,7 +167,7 @@ struct mp_lintr {
 	u8 dst_lapic_lintin;
 };
 
-int smp_init(void);
+int smp_init(struct mm_context *mm);
 int smp_init_late(void);
 
 struct cpu {
@@ -177,7 +177,9 @@ struct cpu {
 	struct mp_processor *processor;
 };
 
-extern struct cpu cpus[8];
+#define MAX_CPU 8
+
+extern struct cpu cpus[MAX_CPU];
 extern u32 nr_cpu;
 
 u32 cpu_id();

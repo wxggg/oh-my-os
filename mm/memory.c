@@ -208,7 +208,7 @@ void kernel_page_table_dump(unsigned long va, size_t size)
 	page_table_dump(current->proc->mm->pgdir, va, size);
 }
 
-void memory_init(void)
+struct mm_context *memory_init(void)
 {
 	struct mm_context *mm;
 	struct page *page;
@@ -234,7 +234,8 @@ void memory_init(void)
 	set_pde(mm->pgdir + pde_index(VPT), cr3, PDE_P | PDE_W);
 
 	/* map linear area */
-	kernel_map(KERNEL_VIRT_BASE, 0x0, linear_end_pfn << PAGE_SHIFT, PTE_W);
+	page_map(mm->pgdir, KERNEL_VIRT_BASE, 0x0, linear_end_pfn << PAGE_SHIFT,
+		 PTE_W);
 
 	start_paging(mm->pgdir);
 
@@ -243,4 +244,5 @@ void memory_init(void)
 	kmalloc_init();
 
 	pr_info("memory init success");
+	return mm;
 }

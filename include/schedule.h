@@ -4,6 +4,7 @@
 #include <irq.h>
 #include <string.h>
 #include <fs.h>
+#include <smp.h>
 
 struct thread_context {
 	uint32_t eip;
@@ -46,10 +47,15 @@ struct process {
 	struct list_node thread_group;
 };
 
-int schedule_init(void);
+struct run_queue {
+	struct list_node head;
+};
+
+int schedule_init(int cpu);
 void schedule(void);
 
-struct thread *thread_run(int (*fn)(void *), void *arg);
+struct thread *thread_run(int (*fn)(void *), void *arg, int cpu);
 void thread_exit(int err);
 
-extern struct thread *current;
+extern struct thread *current_threads[MAX_CPU];
+#define current current_threads[cpu_id()]

@@ -5,23 +5,24 @@
 #include <register.h>
 #include <stdio.h>
 #include <debug.h>
+#include <smp.h>
+#include <lock.h>
 
-extern char bootstack[], bootstacktop[];
+#define MODULE "schedule"
+#define MODULE_DEBUG 1
+
+extern char bootstack[];
 
 static struct process init_proc;
-struct process *current_proc = &init_proc;
 
-struct list_node run_list;
+struct run_queue rqs[MAX_CPU];
+struct thread *current_threads[MAX_CPU];
 
-static uint32_t g_thread_id = 1;
+#define this_rq ((struct run_queue *)&rqs[cpu_id()])
 
-struct thread idle_thread = {
-	.tid = 0,
-	.state = THREAD_RUNNING,
-	.proc = &init_proc,
-};
+static uint32_t g_thread_id = 0;
 
-struct thread *current = &idle_thread;
+static spinlock_t sched_lock[MAX_CPU];
 
 void thread_entry(void);
 void run_entrys(struct trapframe *tf);
@@ -74,10 +75,13 @@ err_free_str:
 	return ret;
 }
 
-struct thread *thread_run(int (*fn)(void *), void *arg)
+struct thread *thread_run(int (*fn)(void *), void *arg, int cpu)
 {
 	int ret;
 	struct thread *t;
+
+	if (cpu < 0 || cpu >= MAX_CPU)
+		cpu = cpu_id();
 
 	t = kmalloc(sizeof(*t));
 	if (!t)
@@ -104,12 +108,16 @@ struct thread *thread_run(int (*fn)(void *), void *arg)
 	t->context.eip = (uintptr_t)run_entry;
 	t->context.ebp = (uintptr_t)t->kstack;
 
-	t->proc = current_proc;
+	t->proc = current->proc;
 	t->tid = g_thread_id++;
 	t->state = THREAD_RUNNABLE;
 
-	list_insert(&current_proc->thread_group, &t->node);
-	list_insert(&run_list, &t->sched_node);
+	spin_lock(&sched_lock[cpu]);
+	list_insert(&current_threads[cpu]->proc->thread_group, &t->node);
+	list_insert(&rqs[cpu].head, &t->sched_node);
+	spin_unlock(&sched_lock[cpu]);
+
+	pr_debug("create thread-", dec(t->tid), " on cpu-", dec(cpu));
 
 	ret = create_thread_procfs(t);
 	if (ret)
@@ -129,29 +137,36 @@ void schedule(void)
 	struct list_node *node;
 	struct thread *prev = current, *next;
 	struct thread_context context;
+	int cpu = cpu_id();
 
-	if (list_empty(&run_list))
+	if (list_empty(&this_rq->head))
 		return;
 
-	node = list_next(&run_list);
+	node = list_next(&this_rq->head);
 	next = container_of(node, struct thread, sched_node);
 
 	if (prev == next)
 		return;
 
-	/* pr_info("schedule: ", dec(current->tid), " => ", dec(next->tid)); */
+	/* pr_debug("schedule: ", dec(current->tid), " => ", dec(next->tid)); */
 
+	spin_lock(&sched_lock[cpu]);
 	list_remove(&next->sched_node);
+	spin_unlock(&sched_lock[cpu]);
 
 	current = next;
 
 	if (prev->state != THREAD_EXIT) {
-		list_insert_tail(&run_list, &prev->sched_node);
+		spin_lock(&sched_lock[cpu]);
+		list_insert_tail(&this_rq->head, &prev->sched_node);
+		spin_unlock(&sched_lock[cpu]);
 		prev->state = THREAD_RUNNABLE;
 		next->state = THREAD_RUNNING;
 		context_switch(&prev->context, &next->context);
 	} else {
+		spin_lock(&sched_lock[cpu]);
 		list_remove(&prev->node);
+		spin_unlock(&sched_lock[cpu]);
 		remove_directory(prev->dir);
 		kfree((void *)prev->kstack);
 		kfree(prev);
@@ -159,18 +174,37 @@ void schedule(void)
 	}
 }
 
-int schedule_init(void)
+int schedule_init(int cpu)
 {
-	struct trapframe *tf;
+	struct run_queue *rq = &rqs[cpu];
+	struct thread *idle;
 
-	list_init(&run_list);
-	list_init(&current_proc->thread_group);
+	spinlock_init(&sched_lock[cpu]);
 
-	tf = (struct trapframe *)(idle_thread.kstack + KERNEL_STACK_SIZE) - 1;
+	pr_info("init schedule on cpu-", dec(cpu));
 
-	idle_thread.kstack = (uint32_t)bootstack;
-	idle_thread.tf = tf;
-	list_insert(&current_proc->thread_group, &idle_thread.node);
+	if (cpu == 0)
+		list_init(&init_proc.thread_group);
+
+	list_init(&rq->head);
+
+	idle = kmalloc(sizeof(*idle));
+	if (!idle)
+		return -ENOMEM;
+
+	idle->tid = g_thread_id++;
+	idle->state = THREAD_RUNNING;
+	idle->proc = &init_proc;
+	idle->kstack = (uint32_t)bootstack;
+	idle->tf = (struct trapframe *)(idle->kstack + KERNEL_STACK_SIZE * cpu) - 1;
+
+	pr_debug("create idle thread-", dec(idle->tid));
+
+	current_threads[cpu] = idle;
+
+	list_insert(&init_proc.thread_group, &idle->node);
+
+	create_thread_procfs(idle);
 
 	return 0;
 }

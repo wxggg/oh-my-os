@@ -43,7 +43,7 @@ static int run_shell(void *arg)
 
 int start_new_shell(void)
 {
-	shell = thread_run(run_shell, NULL);
+	shell = thread_run(run_shell, NULL, 0);
 	return 0;
 }
 

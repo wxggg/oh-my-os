@@ -8,7 +8,7 @@
 #include <atomic.h>
 
 #define MODULE "page table"
-#define MODULE_DEBUG 0
+#define MODULE_DEBUG 1
 
 static inline void tlb_invalidate(unsigned long *pgdir, unsigned long va)
 {

@@ -43,37 +43,42 @@ int kernel_init_late(void)
 
 void start_kernel(void)
 {
+	struct mm_context *mm;
 	extern char edata[], end[];
 	memset(edata, 0, end - edata);
 
 	printk("\nloading...\n");
 
+	intr_disable();
+
 	kmalloc_early_init();
 
 	debug_init();
 
-	memory_init();
+	mm = memory_init();
 
 	stdio_init();
 
-	smp_init();
+	fs_init();
+
+	smp_init(mm);
+
+	schedule_init(0);
+
+	current->proc->mm = mm;
 
 	irq_init();
 
-	schedule_init();
-
-	fs_init();
-
 	kernel_init_late();
 
-	usr_init();
-
-	this_cpu()->started = true;
 	cpu_up(1);
+	this_cpu()->started = true;
 
 	pr_info("kernel init success!");
 
 	os_start = true;
+
+	usr_init();
 
 	while (1) {
 		schedule();

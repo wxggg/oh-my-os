@@ -17,6 +17,7 @@
 #include <x86.h>
 #include <schedule.h>
 #include <debug.h>
+#include <smp.h>
 
 #define MODULE "timer"
 #define MODULE_DEBUG 0
@@ -41,19 +42,20 @@
 
 #define TIMER_DIV(x) ((TIMER_FREQ + (x) / 2) / (x))
 
-volatile unsigned long ticks;
+volatile unsigned long ticks[MAX_CPU];
 
 inline unsigned long tick()
 {
-	return ticks;
+	return ticks[cpu_id()];
 }
 
 static void timer_irq_handler()
 {
-	ticks++;
+	ticks[cpu_id()]++;
 
-	if (ticks % 10 == 0)
+	if (ticks[cpu_id()] % 10 == 0) {
 		schedule();
+	}
 }
 
 /**

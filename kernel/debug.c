@@ -162,8 +162,8 @@ int print_debug(const char *module, const char *debug, const char *end, ...)
 	ksappend_str(&s, module);
 	ksfit(&s, ' ', 10);
 
-	ksappend(&line, "[", dec(tick() / 100), ".", dec(tick() % 100), "\t][",
-		 s.str, "][", debug, "] ");
+	ksappend(&line, "[", dec(tick() / 100), ".", dec(tick() % 100), "\t]",
+		 "[", dec(cpu_id()), "]", "[", s.str, "][", debug, "] ");
 
 	va_start(args, end);
 	while (p != end && n <= 32) {

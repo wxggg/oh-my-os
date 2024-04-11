@@ -18,7 +18,7 @@ static int test_thread(void *arg)
 
 static int thread_test(struct file *file, vector *vec)
 {
-	thread_run(test_thread, NULL);
+	thread_run(test_thread, NULL, -1);
 	return 0;
 }
 

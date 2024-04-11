@@ -5,7 +5,7 @@
 #include <string.h>
 
 #define DEBUG_ENABLE
-#define DEBUG_ENABLE_ALL 1
+#define DEBUG_ENABLE_ALL 0
 
 #define pr_info(...) printk_debug(MODULE, "info ", __VA_ARGS__, "\n")
 #define pr_err(...) printk_debug(MODULE, "error", __VA_ARGS__, "\n")

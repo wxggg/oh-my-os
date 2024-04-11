@@ -10,18 +10,25 @@
 #define MODULE "smp"
 #define MODULE_DEBUG 0
 
-#define MAX_CPU 8
+bool __smp_init = false;
+
 struct cpu cpus[MAX_CPU];
 
 extern volatile u8 ioapic_id;
 
 u32 cpu_id()
 {
+	if (!__smp_init)
+		return 0;
+
 	return lapic_id();
 }
 
 struct cpu *this_cpu()
 {
+	if (!__smp_init)
+		return NULL;
+
 	return &cpus[cpu_id()];
 }
 
@@ -135,7 +142,7 @@ int scan_mp_entry(u8 *start, u8 *end)
 	return 0;
 }
 
-int smp_init(void)
+int smp_init(struct mm_context *mm)
 {
 	struct mp *mp;
 	struct mp_config *config;
@@ -168,7 +175,7 @@ int smp_init(void)
 		" lapic_addr:", hex(config->lapic_addr));
 
 	lapic = (void *)config->lapic_addr;
-	kernel_map((uint32_t)lapic, (uint32_t)lapic, PAGE_SIZE, PTE_W);
+	page_map(mm->pgdir, (uint32_t)lapic, (uint32_t)lapic, PAGE_SIZE, PTE_W);
 
 	scan_mp_entry((u8 *)config + sizeof(*config),
 		      (u8 *)config + config->length);
@@ -178,6 +185,7 @@ int smp_init(void)
 		outb(0x23, inb(0x23) | 1);
 	}
 
+	__smp_init = true;
 	return 0;
 }
 
@@ -203,6 +211,7 @@ void start_secondary(void)
 	start_paging(current->proc->mm->pgdir);
 	lapic_init();
 	idt_init();
+	schedule_init(cpu_id());
 	intr_enable();
 
 	pr_info("cpu-", dec(cpu_id()), " started!");
@@ -238,7 +247,7 @@ int cpu_up(u32 cpu)
 
 	pr_info("start cpu-", dec(c->id));
 
-	while (c->started) {
+	while (!c->started) {
 	}
 
 	return 0;
