@@ -12,6 +12,7 @@ static int run_shell(void *arg)
 	vector *vec = vector_create(string *);
 	string *s = ksalloc();
 	string *sub, *cmd;
+	int ret;
 
 	while (1) {
 		readline(s);
@@ -25,7 +26,10 @@ static int run_shell(void *arg)
 
 		file = binfs_find_file(cmd->str);
 		if (file && file->fops->exec) {
-			file->fops->exec(file, vec);
+			ret = file->fops->exec(file, vec);
+			if (ret)
+				printk("execute \"", s->str, "\" error ",
+				       dec(ret));
 		} else {
 			printk("command not found: ", cmd->str, "\n");
 		}

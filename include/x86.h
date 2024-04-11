@@ -23,6 +23,7 @@
 		__mod;                                               \
 	})
 
+#define smp_wmb() asm volatile("mfence" ::: "memory")
 #define barrier() __asm__ __volatile__("" ::: "memory")
 
 static inline uint8_t inb(uint16_t port) __attribute__((always_inline));

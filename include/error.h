@@ -4,3 +4,4 @@
 #define ENOMEM 12
 #define ENODEV 19
 #define EINVAL 22
+#define ENOSPC 28
