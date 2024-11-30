@@ -167,6 +167,8 @@ struct mp_lintr {
 	u8 dst_lapic_lintin;
 };
 
+struct mm_context;
+
 int smp_init(struct mm_context *mm);
 int smp_init_late(void);
 
