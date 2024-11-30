@@ -132,6 +132,18 @@ err_free_thread:
 	return NULL;
 }
 
+void thread_sleep(struct thread *thread)
+{
+	thread->state = THREAD_SLEEPING;
+	list_remove(&thread->sched_node);
+}
+
+void thread_wakeup(struct thread *thread)
+{
+	thread->state = THREAD_RUNNABLE;
+	list_insert(&thread->sched_node, &this_rq->head);
+}
+
 void schedule(void)
 {
 	struct list_node *node;

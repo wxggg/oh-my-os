@@ -9,6 +9,7 @@
 #include <stdarg.h>
 #include <assert.h>
 #include <smp.h>
+#include <timer.h>
 
 #define MODULE "debug"
 #define MODULE_DEBUG 0
@@ -153,6 +154,7 @@ int print_debug(const char *module, const char *debug, const char *end, ...)
 	va_list args;
 	int n = 0;
 	int ret = 0;
+	struct time now;
 
 	spin_lock(&pr_lock);
 
@@ -162,8 +164,10 @@ int print_debug(const char *module, const char *debug, const char *end, ...)
 	ksappend_str(&s, module);
 	ksfit(&s, ' ', 10);
 
-	ksappend(&line, "[", dec(tick() / 100), ".", dec(tick() % 100), "\t]",
-		 "[", dec(cpu_id()), "]", "[", s.str, "][", debug, "] ");
+	time_now(&now);
+	ksappend(&line, "[", dec(now.hours), ".", dec(now.minutes), ".",
+		 dec(now.seconds), ".", dec(now.msecs), "][", dec(cpu_id()), "]",
+		 "[", s.str, "][", debug, "] ");
 
 	va_start(args, end);
 	while (p != end && n <= 32) {

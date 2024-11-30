@@ -1,6 +1,7 @@
 #pragma once
 
 #include <x86.h>
+#include <list.h>
 
 #define offsetof __builtin_offsetof
 
@@ -18,8 +19,6 @@ struct rtc_date {
 	u32 month;
 	u32 year;
 };
-
-unsigned long tick();
 
 void reboot(void);
 

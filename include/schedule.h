@@ -56,6 +56,8 @@ void schedule(void);
 
 struct thread *thread_run(int (*fn)(void *), void *arg, int cpu);
 void thread_exit(int err);
+void thread_sleep(struct thread *thread);
+void thread_wakeup(struct thread *thread);
 
 extern struct thread *current_threads[MAX_CPU];
 #define current current_threads[cpu_id()]

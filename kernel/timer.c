@@ -18,6 +18,9 @@
 #include <schedule.h>
 #include <debug.h>
 #include <smp.h>
+#include <kernel.h>
+#include <timer.h>
+#include <kmalloc.h>
 
 #define MODULE "timer"
 #define MODULE_DEBUG 0
@@ -42,18 +45,69 @@
 
 #define TIMER_DIV(x) ((TIMER_FREQ + (x) / 2) / (x))
 
-volatile unsigned long ticks[MAX_CPU];
+static struct time times[MAX_CPU];
+static struct list_node timer_lists[MAX_CPU];
 
-inline unsigned long tick()
+static bool time_cmp(struct time *t1, struct time *t2)
 {
-	return ticks[cpu_id()];
+	if (t1->hours > t2->hours)
+		return true;
+	if (t1->hours < t2->hours)
+		return false;
+
+	if (t1->minutes > t2->minutes)
+		return true;
+	if (t1->minutes < t2->minutes)
+		return false;
+
+	if (t1->seconds * 1000 + t1->msecs >= t2->seconds * 1000 + t2->msecs)
+		return true;
+
+	return false;
+}
+
+static void time_add_ms(struct time *t, int msecs)
+{
+	t->msecs += msecs;
+	t->seconds += t->msecs / 1000;
+	t->msecs = t->msecs % 1000;
+
+	t->minutes += t->seconds / 60;
+	t->seconds = t->seconds % 60;
+
+	t->hours += t->minutes / 60;
+	t->minutes = t->minutes % 60;
+}
+
+static void time_add(struct time *t, int seconds)
+{
+	time_add_ms(t, seconds * 1000);
 }
 
 static void timer_irq_handler()
 {
-	ticks[cpu_id()]++;
+	struct time *t = &times[cpu_id()];
+	struct list_node *node;
+	struct timer *timer;
 
-	if (ticks[cpu_id()] % 10 == 0) {
+	t->ticks++;
+	t->msecs = (t->ticks % 100) * 10;
+
+	/* 1s = 100 ticks = 1000ms*/
+	if (t->ticks % TICK_NUM == 0)
+		time_add(t, 1);
+
+	if (t->ticks == 0) {
+		/* find timerout timer */
+		node = list_next(&timer_lists[cpu_id()]);
+		while (node) {
+			timer = container_of(node, struct timer, node);
+			if (time_cmp(&timer->expired, t))
+				thread_wakeup(timer->thread);
+
+			node = node->next;
+		}
+
 		schedule();
 	}
 }
@@ -71,5 +125,54 @@ void timer_init(void)
 
 	/* pic_enable(PIC_TIMER); */
 	request_irq(IRQ_TIMER, timer_irq_handler);
+
+	list_init(&timer_lists[cpu_id()]);
+
 	pr_info("init timer success");
+}
+
+int time_now(struct time *t)
+{
+	memcpy(t, &times[cpu_id()], sizeof(struct time));
+	return 0;
+}
+
+uint64_t time_ms(void)
+{
+	struct time *t = &times[cpu_id()];
+	return ((t->hours * 60 + t->minutes) * 60 + t->seconds) * 1000 +
+	       t->msecs;
+}
+
+struct timer *timer_create(struct thread *thread, struct time *time_expired)
+{
+	struct timer *t;
+
+	t = kmalloc(sizeof(*t));
+	if (!t)
+		return NULL;
+
+	t->expired = *time_expired;
+	t->thread = thread;
+	list_init(&t->node);
+	return t;
+}
+
+void sleep(int seconds)
+{
+	msleep(seconds * 1000);
+}
+
+void msleep(int msecs)
+{
+	struct timer timer;
+
+	time_now(&timer.expired);
+	time_add_ms(&timer.expired, msecs);
+	timer.thread = current;
+	current->state = THREAD_SLEEPING;
+
+	list_insert_before(&timer.node, &timer_lists[cpu_id()]);
+	schedule();
+	list_remove(&timer.node);
 }
